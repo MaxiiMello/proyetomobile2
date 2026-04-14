@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'models/database/database_bootstrap.dart';
 import 'views/screens/login/login_screen.dart';
@@ -8,6 +9,7 @@ import 'views/screens/map/map_screen.dart';
 import 'views/screens/settings/settings_screen.dart';
 import 'views/screens/profile/profile_screen.dart';
 import 'views/widgets/bottom_nav_bar.dart';
+import 'viewmodels/login_viewmodel.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,12 +56,15 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     if (!isLoggedIn) {
-      return LoginScreen(
-        onLoginSuccess: () {
-          setState(() {
-            isLoggedIn = true;
-          });
-        },
+      return ChangeNotifierProvider(
+        create: (_) => LoginViewModel(),
+        child: LoginScreen(
+          onLoginSuccess: () {
+            setState(() {
+              isLoggedIn = true;
+            });
+          },
+        ),
       );
     }
 

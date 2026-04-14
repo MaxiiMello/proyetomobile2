@@ -1,162 +1,133 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:proyetomobile2/viewmodels/plans_viewmodel.dart';
 
-class PlansScreen extends StatelessWidget {
+class PlansScreen extends StatefulWidget {
   const PlansScreen({super.key});
 
   @override
+  State<PlansScreen> createState() => _PlansScreenState();
+}
+
+class _PlansScreenState extends State<PlansScreen> {
+  bool isMonthly = true;
+
+  @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => PlansViewModel(),
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'Planos e Assinaturas',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          elevation: 0,
-          centerTitle: false,
-          toolbarHeight: 56,
-        ),
-        body: Consumer<PlansViewModel>(
-          builder: (context, viewModel, child) {
-            return SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Planos e Assinaturas'),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              // Toggle between Monthly and Annual
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.all(4),
+                child: Row(
                   children: [
-                    // Toggle between Monthly and Annual
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color.fromARGB(255, 214, 214, 216),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.all(4),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => viewModel.toggleBillingCycle(true),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: viewModel.isMonthly ? Colors.white : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(6),
-                                  boxShadow: viewModel.isMonthly
-                                      ? [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.1),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ]
-                                      : [],
-                                ),
-                                child: const Text(
-                                  'Mensal',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF1B7E3D),
-                                  ),
-                                ),
-                              ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            isMonthly = true;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: isMonthly ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Mensal',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1B7E3D),
                             ),
                           ),
-                          Expanded(
-                            child: GestureDetector(
-                              onTap: () => viewModel.toggleBillingCycle(false),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: !viewModel.isMonthly ? Colors.white : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(6),
-                                  boxShadow: !viewModel.isMonthly
-                                      ? [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(alpha: 0.1),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ]
-                                      : [],
-                                ),
-                                child: const Text(
-                                  'Anual',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFFFF9500),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 28),
-
-                    // Plans List
                     Expanded(
-                      child: ListView(
-                        children: [
-                          // Essential Plan
-                          _buildPlanCard(
-                            context,
-                            title: 'Essencial',
-                            price: viewModel.getEssentialPrice(),
-                            period: viewModel.getPricePeriod(),
-                            features: [
-                              'Rota mais curta',
-                              'Acesso sem Internet',
-                              'Alertas de navegação',
-                              'Cidade base gratuita',
-                              'Filtros limitados',
-                            ],
-                            buttonText: 'Já possuo',
-                            isPrimary: true,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            isMonthly = false;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: !isMonthly ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                          const SizedBox(height: 20),
-
-                          // Premium Plan
-                          _buildPlanCard(
-                            context,
-                            title: 'Premium',
-                            price: viewModel.getPremiumPrice(),
-                            period: viewModel.getPricePeriod(),
-                            features: [
-                              'Mapas de todo o país',
-                              'Priorização de pavimento',
-                              'Fuga inteligente de semáforos',
-                              'Sem anúncios',
-                              'Filtros ilimitados',
-                            ],
-                            buttonText: 'Assinar',
-                            isPrimary: false,
+                          child: const Text(
+                            'Anual',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFFFA500),
+                            ),
                           ),
-                          const SizedBox(height: 20),
-                        ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            );
-          },
+              const SizedBox(height: 24),
+
+              // Essential Plan
+              _buildPlanCard(
+                title: 'Essencial',
+                price: isMonthly ? '\$0' : '\$0',
+                period: isMonthly ? '/mês' : '/ano',
+                features: [
+                  'Rota mais curta',
+                  'Acesso sem Internet',
+                  'Alertas de navegação',
+                  'Cidade base gratuita',
+                  'Filtros limitados',
+                ],
+                buttonText: 'Já possuo',
+                isPrimary: true,
+              ),
+              const SizedBox(height: 16),
+
+              // Premium Plan
+              _buildPlanCard(
+                title: 'Premium',
+                price: isMonthly ? '\$5' : '\$50',
+                period: isMonthly ? '/mês' : '/ano',
+                features: [
+                  'Mapas de todo o país',
+                  'Priorização de pavimento',
+                  'Fuga inteligente de semáforos',
+                  'Sem anúncios',
+                  'Filtros limitados',
+                ],
+                buttonText: 'Assinar',
+                isPrimary: false,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildPlanCard(
-    BuildContext context, {
+  Widget _buildPlanCard({
     required String title,
     required String price,
     required String period,
@@ -170,51 +141,39 @@ class PlansScreen extends StatelessWidget {
         color: isPrimary ? Colors.white : Colors.grey[900],
         border: Border.all(
           color: isPrimary ? Colors.grey[300]! : Colors.grey[700]!,
-          width: 1,
         ),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title and Price
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: isPrimary ? Colors.black87 : Colors.white,
+                  fontWeight: FontWeight.w600,
+                  color: isPrimary ? Colors.black : Colors.white,
                 ),
               ),
               RichText(
                 text: TextSpan(
                   children: [
                     TextSpan(
-                      text: '\$',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: isPrimary ? const Color(0xFFFF9500) : const Color(0xFFFF9500),
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    TextSpan(
                       text: price,
                       style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        color: isPrimary ? const Color(0xFFFF9500) : const Color(0xFFFF9500),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: isPrimary ? const Color(0xFFFFA500) : const Color(0xFFFFA500),
                       ),
                     ),
                     TextSpan(
                       text: period,
                       style: TextStyle(
                         fontSize: 12,
-                        color: isPrimary ? Colors.grey[700] : Colors.grey[500],
-                        fontWeight: FontWeight.w500,
+                        color: isPrimary ? Colors.grey[600] : Colors.grey[400],
                       ),
                     ),
                   ],
@@ -233,23 +192,18 @@ class PlansScreen extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Icon(
-                        Icons.check,
-                        size: 18,
-                        color: isPrimary ? const Color(0xFF1B7E3D) : const Color(0xFFFF9500),
-                      ),
+                    Icon(
+                      Icons.check,
+                      size: 18,
+                      color: isPrimary ? const Color(0xFF1B7E3D) : const Color(0xFFFFA500),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         feature,
                         style: TextStyle(
                           fontSize: 14,
-                          color: isPrimary ? Colors.grey[800] : Colors.grey[300],
-                          fontWeight: FontWeight.w500,
-                          height: 1.3,
+                          color: isPrimary ? Colors.grey[700] : Colors.grey[300],
                         ),
                       ),
                     ),
@@ -263,9 +217,16 @@ class PlansScreen extends StatelessWidget {
           // Button
           SizedBox(
             width: double.infinity,
-            height: 48,
+            height: 50,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                // Botón de acción: Asegurar plan o información
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(buttonText),
+                  ),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: isPrimary ? const Color(0xFF1B7E3D) : Colors.white,
                 shape: RoundedRectangleBorder(
@@ -278,7 +239,7 @@ class PlansScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: isPrimary ? Colors.white : Colors.black87,
+                  color: isPrimary ? Colors.white : Colors.black,
                 ),
               ),
             ),

@@ -1,89 +1,91 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:proyetomobile2/viewmodels/settings_viewmodel.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool notificationsEnabled = true;
+
+  @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => SettingsViewModel(),
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'Configurações',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Configurações',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
           ),
-          elevation: 0,
-          centerTitle: false,
-          toolbarHeight: 56,
         ),
-        body: Consumer<SettingsViewModel>(
-          builder: (context, viewModel, child) {
-            return ListView(
-              children: [
-                _buildSettingsSection(
-                  title: 'Preferências',
-                  children: [
-                    _buildSettingsTile(
-                      icon: Icons.language,
-                      title: 'Idioma',
-                      subtitle: viewModel.selectedLanguage,
-                    ),
-                    _buildSettingsTile(
-                      icon: Icons.location_on,
-                      title: 'Localização',
-                      subtitle: viewModel.locationSetting,
-                    ),
-                    _buildSettingsTile(
-                      icon: Icons.volume_up,
-                      title: 'Notificações de Som',
-                      subtitle: viewModel.notificationsEnabled ? 'Ativado' : 'Desativado',
-                      trailing: Switch(
-                        value: viewModel.notificationsEnabled,
-                        activeThumbColor: const Color(0xFF1B7E3D),
-                        activeTrackColor: const Color(0xFF1B7E3D).withValues(alpha: 0.5),
-                        onChanged: (value) => viewModel.toggleNotifications(value),
-                      ),
-                    ),
-                  ],
+        elevation: 0,
+        centerTitle: false,
+        toolbarHeight: 56,
+      ),
+      body: ListView(
+        children: [
+          _buildSettingsSection(
+            title: 'Preferências',
+            children: [
+              _buildSettingsTile(
+                icon: Icons.language,
+                title: 'Idioma',
+                subtitle: 'Português (BR)',
+              ),
+              _buildSettingsTile(
+                icon: Icons.location_on,
+                title: 'Localização',
+                subtitle: 'Sempre ativo',
+              ),
+              _buildSettingsTile(
+                icon: Icons.volume_up,
+                title: 'Notificações de Som',
+                subtitle: notificationsEnabled ? 'Ativado' : 'Desativado',
+                trailing: Switch(
+                  value: notificationsEnabled,
+                  activeThumbColor: const Color(0xFF1B7E3D),
+                  activeTrackColor: const Color(0xFF1B7E3D).withValues(alpha: 0.5),
+                  onChanged: (value) {
+                    setState(() {
+                      notificationsEnabled = value;
+                    });
+                  },
                 ),
-                _buildSettingsSection(
-                  title: 'Dados e Privacidade',
-                  children: [
-                    _buildSettingsTile(
-                      icon: Icons.storage,
-                      title: 'Gerenciar Downloads',
-                      subtitle: '${viewModel.mapStorageSize} de mapas instalados',
-                    ),
-                    _buildSettingsTile(
-                      icon: Icons.privacy_tip,
-                      title: 'Política de Privacidade',
-                    ),
-                    _buildSettingsTile(
-                      icon: Icons.description,
-                      title: 'Termos de Serviço',
-                    ),
-                  ],
-                ),
-                _buildSettingsSection(
-                  title: 'Sobre',
-                  children: [
-                    _buildSettingsTile(
-                      icon: Icons.info,
-                      title: 'Versão do App',
-                      subtitle: viewModel.appVersion,
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
-        ),
+              ),
+            ],
+          ),
+          _buildSettingsSection(
+            title: 'Dados e Privacidade',
+            children: [
+              _buildSettingsTile(
+                icon: Icons.storage,
+                title: 'Gerenciar Downloads',
+                subtitle: '2.5 GB de mapas instalados',
+              ),
+              _buildSettingsTile(
+                icon: Icons.privacy_tip,
+                title: 'Política de Privacidade',
+              ),
+              _buildSettingsTile(
+                icon: Icons.description,
+                title: 'Termos de Serviço',
+              ),
+            ],
+          ),
+          _buildSettingsSection(
+            title: 'Sobre',
+            children: [
+              _buildSettingsTile(
+                icon: Icons.info,
+                title: 'Versão do App',
+                subtitle: 'v1.0.0',
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
