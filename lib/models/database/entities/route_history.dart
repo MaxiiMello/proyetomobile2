@@ -1,5 +1,6 @@
 class RouteHistory {
   final int? id;
+  final int? userId;
   final DateTime startedAt;
   final DateTime? finishedAt;
   final double originLat;
@@ -13,6 +14,7 @@ class RouteHistory {
 
   RouteHistory({
     this.id,
+    this.userId,
     required this.startedAt,
     this.finishedAt,
     required this.originLat,
@@ -28,6 +30,7 @@ class RouteHistory {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'user_id': userId,
       'started_at': startedAt.toIso8601String(),
       'finished_at': finishedAt?.toIso8601String(),
       'origin_lat': originLat,
@@ -44,6 +47,7 @@ class RouteHistory {
   factory RouteHistory.fromMap(Map<String, dynamic> map) {
     return RouteHistory(
       id: map['id'] as int?,
+      userId: map['user_id'] as int?,
       startedAt: DateTime.parse(map['started_at'] as String),
       finishedAt: map['finished_at'] != null 
           ? DateTime.parse(map['finished_at'] as String) 
