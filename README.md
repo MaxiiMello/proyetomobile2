@@ -14,7 +14,10 @@ lib/
 ├── services/              # External services (GpsService, RouteCostCalculator)
 ├── viewmodels/            # Business logic / state management
 ├── views/                 # UI screens and widgets
-└── main.dart
+│   ├── app.dart           # Root MaterialApp widget
+│   └── home/
+│       └── home_screen.dart  # Home screen
+└── main.dart              # Entry point
 ```
 
 ## Features (initial commit `27e0224`)
