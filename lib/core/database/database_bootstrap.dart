@@ -1,4 +1,4 @@
-import 'repositories/app_settings_repository.dart';
+import '../../repositories/app_settings_repository.dart';
 import 'app_database.dart';
 
 class DatabaseBootstrap {

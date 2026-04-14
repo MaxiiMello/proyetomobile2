@@ -1,4 +1,4 @@
-import 'repositories/app_settings_repository.dart';
+import '../models/app_routing_settings.dart';
 
 class RouteCostCalculator {
   static double segmentCost({

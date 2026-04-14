@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'model/database/database_bootstrap.dart';
+import 'core/database/database_bootstrap.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
