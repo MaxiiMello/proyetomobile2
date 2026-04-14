@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import 'model/database/database_bootstrap.dart';
-import 'screens/login_screen.dart';
-import 'screens/home_screen.dart';
-import 'screens/plans_screen_new.dart';
-import 'screens/map_screen.dart';
-import 'screens/settings_screen.dart';
-import 'screens/profile_screen.dart';
-import 'widgets/bottom_nav_bar.dart';
+import 'models/database/database_bootstrap.dart';
+import 'views/screens/login/login_screen.dart';
+import 'views/screens/home/home_screen.dart';
+import 'views/screens/plans/plans_screen.dart';
+import 'views/screens/map/map_screen.dart';
+import 'views/screens/settings/settings_screen.dart';
+import 'views/screens/profile/profile_screen.dart';
+import 'views/widgets/bottom_nav_bar.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -63,17 +63,27 @@ class _MainNavigationState extends State<MainNavigation> {
       );
     }
 
-    return Scaffold(
-      body: _buildBody(),
-      bottomNavigationBar: BottomNavBar(
-        currentIndex: currentIndex,
-        onTap: (index) {
-          setState(() {
-            currentIndex = index;
-          });
-        },
-      ),
-    );
+    try {
+      return Scaffold(
+        body: _buildBody(),
+        bottomNavigationBar: BottomNavBar(
+          currentIndex: currentIndex,
+          onTap: (index) {
+            setState(() {
+              currentIndex = index;
+            });
+          },
+        ),
+      );
+    } catch (e, stackTrace) {
+      debugPrint('Error in MainNavigation.build: $e');
+      debugPrint('Stack trace: $stackTrace');
+      return Scaffold(
+        body: Center(
+          child: Text('Erro na navegação: $e'),
+        ),
+      );
+    }
   }
 
   Widget _buildBody() {
