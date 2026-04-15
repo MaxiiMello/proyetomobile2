@@ -27,7 +27,7 @@ class _PlansScreenState extends State<PlansScreen> {
               // Toggle between Monthly and Annual
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: const Color.fromARGB(255, 209, 209, 209),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 padding: const EdgeInsets.all(4),
@@ -166,7 +166,7 @@ class _PlansScreenState extends State<PlansScreen> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: isPrimary ? const Color(0xFFFFA500) : const Color(0xFFFFA500),
+                        color: isPrimary ? const Color(0xFF1B7E3D) : const Color(0xFF1B7E3D),
                       ),
                     ),
                     TextSpan(

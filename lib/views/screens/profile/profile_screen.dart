@@ -1,9 +1,23 @@
 import 'package:flutter/material.dart';
+import '../../../viewmodels/profile_viewmodel.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   final Function() onLogout;
 
   const ProfileScreen({super.key, required this.onLogout});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  late ProfileViewModel viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    viewModel = ProfileViewModel();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +170,7 @@ class ProfileScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 48,
                 child: ElevatedButton(
-                  onPressed: onLogout,
+                  onPressed: widget.onLogout,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red[600],
                     shape: RoundedRectangleBorder(
