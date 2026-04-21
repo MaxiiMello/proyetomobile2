@@ -3,6 +3,8 @@ import '../../../viewmodels/profile_viewmodel.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Function() onLogout;
+  static const String _defaultUserName = 'Usuario';
+  static const String _defaultUserEmail = 'usuario@email.com';
 
   const ProfileScreen({super.key, required this.onLogout});
 
@@ -58,7 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    viewModel.userName,
+                    _defaultUserName,
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
@@ -67,7 +69,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    viewModel.userEmail,
+                    _defaultUserEmail,
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.grey[700],
@@ -132,7 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ],
                       ),
                       ElevatedButton(
-                        onPressed: () => viewModel.logout(),
+                        onPressed: () {},
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1B7E3D),
                           padding: const EdgeInsets.symmetric(

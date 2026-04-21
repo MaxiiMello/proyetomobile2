@@ -9,17 +9,22 @@ import 'views/screens/map/map_screen.dart';
 import 'views/screens/settings/settings_screen.dart';
 import 'views/screens/profile/profile_screen.dart';
 import 'views/widgets/bottom_nav_bar.dart';
+import 'services/notification_service.dart';
 import 'viewmodels/login_viewmodel.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Inicializar banco de dados com tratamento seguro para web
+
   try {
     await DatabaseBootstrap.initialize();
   } catch (e) {
-    // Em web, o banco de dados não é suportado, apenas continua
     debugPrint('Database initialization skipped: $e');
+  }
+
+  try {
+    await NotificationService.instance.initialize();
+  } catch (e) {
+    debugPrint('Notification initialization skipped: $e');
   }
   
   runApp(const MainApp());
@@ -51,7 +56,7 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   bool isLoggedIn = false;
-  int currentIndex = 2; // Home é o índice padrão
+  int currentIndex = 2;
 
   @override
   Widget build(BuildContext context) {

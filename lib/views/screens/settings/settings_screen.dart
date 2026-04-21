@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../services/notification_service.dart';
+
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
@@ -54,6 +56,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     });
                   },
                 ),
+              ),
+              _buildSettingsTile(
+                icon: Icons.notifications_active,
+                title: 'Testar notificação local',
+                subtitle: 'Mostra um aviso offline de teste',
+                onTap: () async {
+                  await NotificationService.instance.showTestNotification();
+                },
               ),
             ],
           ),
@@ -118,6 +128,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String title,
     String? subtitle,
     Widget? trailing,
+    VoidCallback? onTap,
   }) {
     return ListTile(
       leading: Icon(icon, color: const Color(0xFF1B7E3D), size: 22),
@@ -139,7 +150,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             )
           : null,
       trailing: trailing ?? Icon(Icons.chevron_right, color: Colors.grey[600]),
-      onTap: () {},
+      onTap: onTap ?? () {},
       dense: true,
     );
   }
