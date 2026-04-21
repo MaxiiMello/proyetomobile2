@@ -60,7 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    _defaultUserName,
+                    ProfileScreen._defaultUserName,
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
@@ -69,7 +69,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    _defaultUserEmail,
+                    ProfileScreen._defaultUserEmail,
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.grey[700],
