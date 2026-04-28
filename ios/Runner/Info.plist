@@ -68,5 +68,7 @@
     </array>
     <key>NSLocationWhenInUseUsageDescription</key>
     <string>SinalVerde necesita tu ubicación para mejorar la fluidez de tu ruta.</string>
+    <key>com.google.ios.API_KEY</key>
+    <string>AIzaSyDwM_q0d1ECZwb5rY8uaLiDMuFhOUpEZM0</string>
 </dict>
 </plist>

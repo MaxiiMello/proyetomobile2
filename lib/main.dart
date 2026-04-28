@@ -11,6 +11,7 @@ import 'views/screens/profile/profile_screen.dart';
 import 'views/widgets/bottom_nav_bar.dart';
 import 'services/notification_service.dart';
 import 'viewmodels/login_viewmodel.dart';
+import 'viewmodels/map_viewmodel.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,15 +75,18 @@ class _MainNavigationState extends State<MainNavigation> {
     }
 
     try {
-      return Scaffold(
-        body: _buildBody(),
-        bottomNavigationBar: BottomNavBar(
-          currentIndex: currentIndex,
-          onTap: (index) {
-            setState(() {
-              currentIndex = index;
-            });
-          },
+      return ChangeNotifierProvider(
+        create: (_) => MapViewModel(),
+        child: Scaffold(
+          body: _buildBody(),
+          bottomNavigationBar: BottomNavBar(
+            currentIndex: currentIndex,
+            onTap: (index) {
+              setState(() {
+                currentIndex = index;
+              });
+            },
+          ),
         ),
       );
     } catch (e, stackTrace) {

@@ -70,7 +70,7 @@ class NotificationService {
         channelDescription: _channelDescription,
         importance: Importance.high,
         priority: Priority.high,
-      ),
+      ), 
       iOS: DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,

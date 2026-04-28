@@ -1,13 +1,15 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/database/repositories/user_repository.dart';
-import '../services/gps_service.dart';
+import '../services/gps_service.dart' show GpsService, LocationData;
+import '../services/address_service.dart' show AddressService, AddressSuggestion;
 
 class MapViewModel extends ChangeNotifier {
   final GpsService _gpsService = GpsService();
+  final AddressService _addressService = AddressService();
 
-  double currentLatitude = 0;
-  double currentLongitude = 0;
+  double currentLatitude = -30.8936; // Santana do Livramento, RS
+  double currentLongitude = -55.5205;
   String? selectedDestination;
   double zoomLevel = 15.0;
 
@@ -16,18 +18,53 @@ class MapViewModel extends ChangeNotifier {
   String? errorMessage;
   User? currentUser;
 
+  // Propriedades para sugestões de endereços
+  List<String> addressSuggestions = [];
+  bool isLoadingSuggestions = false;
+
   MapViewModel({User? user}) {
     currentUser = user;
+    // Se em web, já começa com coordenadas padrão
+    if (kIsWeb) {
+      isLoadingMap = false;
+    } else {
+      // Em mobile, tenta carregar localização real
+      loadMap();
+    }
   }
 
-  /// Cargar mapa
+  /// Caregar mapa
   Future<void> loadMap() async {
     isLoadingMap = true;
     errorMessage = null;
     notifyListeners();
 
     try {
-      final location = await _gpsService.getLastKnownLocation();
+      // Primeiro tenta última localização conhecida (mais rápido) com timeout
+      LocationData? location;
+      try {
+        location = await _gpsService.getLastKnownLocation()
+            .timeout(const Duration(seconds: 5));
+      } catch (e) {
+        // Continua mesmo que falhe
+        location = null;
+      }
+      
+      // Se não encontrou última localização, obtém atual com timeout
+      if (location == null) {
+        try {
+          location = await _gpsService.getCurrentLocation()
+              .timeout(const Duration(seconds: 8));
+        } catch (e) {
+          // Se GPS falhar, usa localização padrão (Santana do Livramento, RS)
+          currentLatitude = -30.8936;
+          currentLongitude = -55.5205;
+          isLoadingMap = false;
+          notifyListeners();
+          return;
+        }
+      }
+      
       if (location != null) {
         currentLatitude = location.latitude;
         currentLongitude = location.longitude;
@@ -36,7 +73,9 @@ class MapViewModel extends ChangeNotifier {
       isLoadingMap = false;
       notifyListeners();
     } catch (e) {
-      errorMessage = e.toString().replaceAll('Exception: ', '');
+      // Fallback para localização padrão se tudo falhar
+      currentLatitude = -30.8936;
+      currentLongitude = -55.5205;
       isLoadingMap = false;
       notifyListeners();
     }
@@ -72,16 +111,59 @@ class MapViewModel extends ChangeNotifier {
     }
   }
 
-  /// Buscar y establecer destino
-  void searchDestination(String destination) {
-    if (destination.isEmpty) {
-      errorMessage = 'Ingrese un destino';
+  /// Buscar sugestões de endereços enquanto o usuário digita
+  Future<void> getAddressSuggestions(String input) async {
+    if (input.isEmpty) {
+      addressSuggestions = [];
       notifyListeners();
       return;
     }
 
-    selectedDestination = destination;
-    errorMessage = null;
+    isLoadingSuggestions = true;
+    notifyListeners();
+
+    try {
+      final suggestions = await _addressService.getPlacePredictions(input);
+      addressSuggestions = suggestions;
+    } catch (e) {
+      addressSuggestions = [];
+      print('Error getting suggestions: $e');
+    }
+
+    isLoadingSuggestions = false;
+    notifyListeners();
+  }
+
+  /// Selecionar um endereço e mover o mapa para lá
+  Future<void> selectAddress(String address) async {
+    isLoadingMap = true;
+    selectedDestination = address;
+    addressSuggestions = []; // Limpar sugestões
+    notifyListeners();
+
+    try {
+      final suggestion = await _addressService.geocodeAddress(address);
+      
+      if (suggestion != null) {
+        currentLatitude = suggestion.latitude;
+        currentLongitude = suggestion.longitude;
+        zoomLevel = 15.0; // Reset zoom para endereço selecionado
+        errorMessage = null;
+      } else {
+        errorMessage = 'Não foi possível encontrar este local';
+      }
+    } catch (e) {
+      errorMessage = 'Erro ao buscar endereço: $e';
+      print('Error selecting address: $e');
+    }
+
+    isLoadingMap = false;
+    notifyListeners();
+  }
+
+  /// Limpar sugestões
+  void clearSuggestions() {
+    addressSuggestions = [];
     notifyListeners();
   }
 

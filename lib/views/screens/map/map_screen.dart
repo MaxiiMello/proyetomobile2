@@ -1,7 +1,57 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 
-class MapScreen extends StatelessWidget {
+import '../../../services/maps_service.dart';
+import '../../../viewmodels/map_viewmodel.dart';
+
+class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
+
+  @override
+  State<MapScreen> createState() => _MapScreenState();
+}
+
+class _MapScreenState extends State<MapScreen> {
+  GoogleMapController? _mapController;
+  final MapsService _mapsService = MapsService.instance;
+  late TextEditingController _searchController;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController = TextEditingController();
+    
+    // Listener para buscar sugestões enquanto digita
+    _searchController.addListener(() {
+      final viewModel = context.read<MapViewModel>();
+      if (_searchController.text.isNotEmpty) {
+        viewModel.getAddressSuggestions(_searchController.text);
+      } else {
+        viewModel.clearSuggestions();
+      }
+    });
+
+    // Carregar mapa apenas uma vez ao iniciar
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final viewModel = context.read<MapViewModel>();
+        if (!_initialized && !kIsWeb) {
+          viewModel.loadMap();
+          _initialized = true;
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    // GoogleMapController é gerenciado automaticamente pelo plugin
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -9,49 +59,119 @@ class MapScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // Search Bar Header
+      // Search Bar Header com Sugestões
             Padding(
               padding: const EdgeInsets.all(16.0),
-              child: TextField(
-                style: const TextStyle(fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'Selecionar destino...',
-                  hintStyle: TextStyle(
-                    color: Colors.grey[400],
-                    fontSize: 14,
-                  ),
-                  prefixIcon: Icon(
-                    Icons.search,
-                    color: Colors.grey[500],
-                    size: 20,
-                  ),
-                  suffixIcon: Icon(
-                    Icons.wifi,
-                    color: Colors.grey[600],
-                    size: 20,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.grey[300]!),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF1B7E3D),
-                      width: 1.5,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 12,
-                  ),
-                ),
+              child: Consumer<MapViewModel>(
+                builder: (context, viewModel, _) {
+                  return Column(
+                    children: [
+                      // Campo de busca
+                      TextField(
+                        controller: _searchController,
+                        style: const TextStyle(fontSize: 14),
+                        onChanged: (value) {
+                          // Listener já está em initState, mas isso garante a atualização da UI
+                          setState(() {});
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Selecionar destino...',
+                          hintStyle: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 14,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: Colors.grey[500],
+                            size: 20,
+                          ),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(
+                                    Icons.close,
+                                    color: Colors.grey[600],
+                                    size: 20,
+                                  ),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    viewModel.selectedDestination = null;
+                                    viewModel.clearSuggestions();
+                                  },
+                                )
+                              : Icon(
+                                  Icons.location_on,
+                                  color: Colors.grey[600],
+                                  size: 20,
+                                ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF1B7E3D),
+                              width: 1.5,
+                            ),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+
+                      // Lista de sugestões
+                      if (viewModel.addressSuggestions.isNotEmpty)
+                        Container(
+                          constraints: const BoxConstraints(maxHeight: 200),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(
+                              color: Colors.grey[300]!,
+                              width: 1,
+                            ),
+                            borderRadius: const BorderRadius.only(
+                              bottomLeft: Radius.circular(10),
+                              bottomRight: Radius.circular(10),
+                            ),
+                          ),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: viewModel.addressSuggestions.length,
+                            itemBuilder: (context, index) {
+                              final suggestion = viewModel.addressSuggestions[index];
+                              return ListTile(
+                                leading: const Icon(
+                                  Icons.location_on_outlined,
+                                  color: Color(0xFF1B7E3D),
+                                  size: 18,
+                                ),
+                                title: Text(
+                                  suggestion,
+                                  style: const TextStyle(fontSize: 13),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                onTap: () {
+                                  // Selecionar o endereço e mover o mapa
+                                  viewModel.selectAddress(suggestion);
+                                  _searchController.text = suggestion;
+                                  FocusScope.of(context).unfocus();
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
 
@@ -67,76 +187,98 @@ class MapScreen extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Mapa será integrado aqui
-                    Container(),
-
-                    // GPS Position - Center
-                    Center(
-                      child: Container(
-                        width: 50,
-                        height: 50,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(0xFF1B7E3D),
-                            width: 3,
-                          ),
-                          color: Colors.white,
-                        ),
-                        child: const Icon(
-                          Icons.location_on,
-                          color: Color(0xFF1B7E3D),
-                          size: 24,
-                        ),
-                      ),
-                    ),
-
-                    // Bottom Right Actions
-                    Positioned(
-                      bottom: 16,
-                      right: 16,
-                      child: Column(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Consumer<MapViewModel>(
+                    builder: (context, viewModel, _) {
+                      return Stack(
                         children: [
-                          FloatingActionButton(
-                            heroTag: 'center',
-                            backgroundColor: const Color(0xFF1B7E3D),
-                            mini: true,
-                            onPressed: () {
-                              // Centrar mapa en ubicación actual
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Ubicación centrali zada')),
-                              );
-                            },
-                            child: const Icon(
-                              Icons.gps_fixed,
-                              color: Colors.white,
-                              size: 18,
+                          GoogleMap(
+                            initialCameraPosition: CameraPosition(
+                              target: LatLng(
+                                viewModel.currentLatitude,
+                                viewModel.currentLongitude,
+                              ),
+                              zoom: viewModel.zoomLevel,
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          FloatingActionButton(
-                            heroTag: 'zoom',
-                            backgroundColor: Colors.grey[400],
-                            mini: true,
-                            onPressed: () {
-                              // Zoom in
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Zoom in')),
-                              );
+                            onMapCreated: (controller) {
+                              _mapController = controller;
+                              _mapsService.setMapController(controller);
                             },
-                            child: const Icon(
-                              Icons.add,
-                              color: Colors.white,
-                              size: 18,
+                            myLocationEnabled: true,
+                            myLocationButtonEnabled: false,
+                            zoomControlsEnabled: false,
+                            mapToolbarEnabled: false,
+                            onCameraMove: (CameraPosition position) {
+                              viewModel.zoomLevel = position.zoom;
+                            },
+                          ),
+
+                          // Botões de ação
+                          Positioned(
+                            bottom: 16,
+                            right: 16,
+                            child: Column(
+                              children: [
+                                FloatingActionButton(
+                                  heroTag: 'center',
+                                  backgroundColor:
+                                      const Color(0xFF1B7E3D),
+                                  mini: true,
+                                  onPressed: () async {
+                                    await viewModel.requestGPSLocation();
+                                    if (viewModel.currentLatitude != 0 &&
+                                        viewModel.currentLongitude != 0) {
+                                      await _mapsService.moveCameraTo(
+                                        LatLng(
+                                          viewModel.currentLatitude,
+                                          viewModel.currentLongitude,
+                                        ),
+                                        zoom: viewModel.zoomLevel,
+                                      );
+                                    }
+                                  },
+                                  child: const Icon(
+                                    Icons.gps_fixed,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                FloatingActionButton(
+                                  heroTag: 'zoom_in',
+                                  backgroundColor: Colors.grey[400],
+                                  mini: true,
+                                  onPressed: () async {
+                                    await _mapsService.zoomIn();
+                                  },
+                                  child: const Icon(
+                                    Icons.add,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                FloatingActionButton(
+                                  heroTag: 'zoom_out',
+                                  backgroundColor: Colors.grey[400],
+                                  mini: true,
+                                  onPressed: () async {
+                                    await _mapsService.zoomOut();
+                                  },
+                                  child: const Icon(
+                                    Icons.remove,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
-                      ),
-                    ),
-                  ],
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
