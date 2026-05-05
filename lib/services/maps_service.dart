@@ -1,16 +1,17 @@
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 class MapsService {
   MapsService._();
 
   static final MapsService instance = MapsService._();
 
-  GoogleMapController? _mapController;
+  MapController? _mapController;
 
-  GoogleMapController? get mapController => _mapController;
+  MapController? get mapController => _mapController;
 
   /// Inicializar controlador do mapa
-  void setMapController(GoogleMapController controller) {
+  void setMapController(MapController controller) {
     _mapController = controller;
   }
 
@@ -22,15 +23,8 @@ class MapsService {
     if (_mapController == null) {
       throw Exception('Controlador do mapa não foi inicializado');
     }
-
-    final cameraUpdate = CameraUpdate.newCameraPosition(
-      CameraPosition(
-        target: position,
-        zoom: zoom,
-      ),
-    );
-
-    await _mapController!.animateCamera(cameraUpdate);
+    // flutter_map usa 'move' directo para cambiar la cámara
+    _mapController!.move(position, zoom);
   }
 
   /// Atualizar câmera sem animação
@@ -39,37 +33,29 @@ class MapsService {
     double zoom = 15.0,
   }) {
     if (_mapController == null) return;
-
-    final cameraUpdate = CameraUpdate.newCameraPosition(
-      CameraPosition(
-        target: position,
-        zoom: zoom,
-      ),
-    );
-
-    _mapController!.moveCamera(cameraUpdate);
+    _mapController!.move(position, zoom);
   }
 
   /// Zoom in
   Future<void> zoomIn() async {
     if (_mapController == null) return;
-    await _mapController!.animateCamera(
-      CameraUpdate.zoomIn(),
-    );
+    final currentZoom = _mapController!.camera.zoom;
+    final center = _mapController!.camera.center;
+    _mapController!.move(center, currentZoom + 1);
   }
 
   /// Zoom out
   Future<void> zoomOut() async {
     if (_mapController == null) return;
-    await _mapController!.animateCamera(
-      CameraUpdate.zoomOut(),
-    );
+    final currentZoom = _mapController!.camera.zoom;
+    final center = _mapController!.camera.center;
+    _mapController!.move(center, currentZoom - 1);
   }
 
   /// Obter zoom atual
   Future<double> getZoomLevel() async {
     if (_mapController == null) return 15.0;
-    return await _mapController!.getZoomLevel();
+    return _mapController!.camera.zoom;
   }
 
   /// Obter posição atual da câmera
@@ -77,7 +63,7 @@ class MapsService {
     if (_mapController == null) {
       throw Exception('Controlador do mapa não foi inicializado');
     }
-    return await _mapController!.getVisibleRegion();
+    return _mapController!.camera.visibleBounds;
   }
 
   /// Limpar controlador ao descartar

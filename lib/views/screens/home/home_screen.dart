@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../../../services/maps_service.dart';
@@ -14,7 +15,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  GoogleMapController? _mapController;
+  MapController? _mapController = MapController();
   final MapsService _mapsService = MapsService.instance;
   late TextEditingController _searchController;
   bool _initialized = false;
@@ -268,25 +269,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(12),
                   child: Consumer<MapViewModel>(
                     builder: (context, viewModel, _) {
-                      return GoogleMap(
-                        initialCameraPosition: CameraPosition(
-                          target: LatLng(
-                            viewModel.currentLatitude,
-                            viewModel.currentLongitude,
+                      return FlutterMap(
+                        mapController: _mapController,
+                        options: MapOptions(
+                          initialCenter: LatLng(
+                            viewModel.currentLatitude != 0 ? viewModel.currentLatitude : -30.8831,
+                            viewModel.currentLongitude != 0 ? viewModel.currentLongitude : -55.5350,
                           ),
-                          zoom: viewModel.zoomLevel,
+                          initialZoom: viewModel.zoomLevel > 0 ? viewModel.zoomLevel : 14.0,
+                          onPositionChanged: (MapCamera position, bool hasGesture) {
+                            viewModel.zoomLevel = position.zoom;
+                          },
                         ),
-                        onMapCreated: (controller) {
-                          _mapController = controller;
-                          _mapsService.setMapController(controller);
-                        },
-                        myLocationEnabled: true,
-                        myLocationButtonEnabled: false,
-                        zoomControlsEnabled: false,
-                        mapToolbarEnabled: false,
-                        onCameraMove: (CameraPosition position) {
-                          viewModel.zoomLevel = position.zoom;
-                        },
+                        children: [
+                          TileLayer(
+                            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                            userAgentPackageName: 'com.sinalverde.app',
+                          ),
+                        ],
                       );
                     },
                   ),
