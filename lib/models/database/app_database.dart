@@ -1,6 +1,6 @@
 import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
-
+import 'package:flutter/foundation.dart';
 import 'db_constants.dart';
 import 'migrations/migration_registry.dart';
 

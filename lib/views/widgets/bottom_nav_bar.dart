@@ -32,10 +32,6 @@ class BottomNavBar extends StatelessWidget {
           label: 'Mapa',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.home, size: 22),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
           icon: Icon(Icons.settings, size: 22),
           label: 'Configurações',
         ),
