@@ -131,11 +131,9 @@ class MapViewModel extends ChangeNotifier {
         }
       }
       
-      if (location != null) {
-        currentLatitude = location.latitude;
-        currentLongitude = location.longitude;
-      }
-
+      currentLatitude = location.latitude;
+      currentLongitude = location.longitude;
+    
       isLoadingMap = false;
       notifyListeners();
     } catch (e) {

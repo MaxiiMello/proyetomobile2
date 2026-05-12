@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter/foundation.dart';
@@ -21,6 +22,12 @@ class AppDatabase {
 
   Future<Database> _open() async {
     final basePath = await getDatabasesPath();
+    
+    final directory = Directory(basePath);
+    if (!await directory.exists()) {
+      await directory.create(recursive: true);
+    }
+
     final databasePath = path.join(basePath, DbConstants.databaseName);
 
     return openDatabase(

@@ -1,5 +1,10 @@
 import 'package:flutter/foundation.dart';
 
+
+import 'package:proyetomobile2/models/database/db_constants.dart';
+
+import '../models/database/app_database.dart'; // Só pra debug do login e senha
+
 import '../models/database/repositories/user_repository.dart';
 
 class LoginViewModel extends ChangeNotifier {
@@ -164,5 +169,24 @@ class LoginViewModel extends ChangeNotifier {
       notifyListeners();
       return false;
     }
+  }
+  // ---- Só pra debug do login e senha ----
+  Future<void> verificarUsuariosRegistrados() async {
+    // Pega a instância do banco
+    final db = await AppDatabase.instance.database; 
+    
+    // É mais seguro usar a constante do nome da tabela do que digitar 'users' manualmente
+    final List<Map<String, dynamic>> registros = await db.query(DbConstants.tableUsers);
+
+    debugPrint('--- INÍCIO DA LISTA DE USUÁRIOS ---');
+    if (registros.isEmpty) {
+      debugPrint('Nenhum usuário registrado no banco.');
+    } else {
+      for (var usuario in registros) {
+        // Usando os nomes exatos das colunas definidos na sua MigrationV2
+        debugPrint('ID: ${usuario['id']} | Email: ${usuario['email']} | Senha Salva: ${usuario['password_hash']} | Nome: ${usuario['name']}');
+      }
+    }
+    debugPrint('--- FIM DA LISTA DE USUÁRIOS ---');
   }
 }

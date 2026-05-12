@@ -455,6 +455,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             ],
                           ),
                           const SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: () {
+                              context.read<LoginViewModel>().verificarUsuariosRegistrados();
+                            },
+                            child: const Text('DEBUG: Imprimir Usuários'),
+                          ),
 
                           // Google Button
                           SizedBox(

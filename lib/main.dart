@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
@@ -19,12 +20,12 @@ import 'viewmodels/map_viewmodel.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializa o SQLite para todas as plataformas
+  // Initialize SQLite based on the specific platform
   if (kIsWeb) {
     // Flutter Web
     databaseFactory = databaseFactoryFfiWeb;
-  } else {
-    // Windows, Linux, macOS, Android e iOS
+  } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    // Desktop platforms
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
