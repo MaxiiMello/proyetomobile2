@@ -1,14 +1,11 @@
 import 'package:flutter/foundation.dart';
 
-
-import 'package:proyetomobile2/models/database/db_constants.dart';
-
-import '../models/database/app_database.dart'; // Só pra debug do login e senha
-
 import '../models/database/repositories/user_repository.dart';
+import '../services/session_service.dart';
 
 class LoginViewModel extends ChangeNotifier {
   final UserRepository _userRepository = UserRepository();
+  final SessionService _sessionService = SessionService();
 
   String email = '';
   String password = '';
@@ -25,7 +22,7 @@ class LoginViewModel extends ChangeNotifier {
     password = passwordInput;
 
     if (email.isEmpty || password.isEmpty) {
-      errorMessage = 'Email y contraseña son requeridos';
+      errorMessage = 'Email e senha são obrigatórios';
       notifyListeners();
       return false;
     }
@@ -35,17 +32,31 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      print('🔐 [LoginViewModel] Iniciando login...');
+      
       final user = await _userRepository.login(
         email: email,
         password: password,
       );
 
       currentUser = user;
+      print('✅ [LoginViewModel] Login exitoso, usuario: ${user.email}');
+      
+      // Salvar sessão para manter logado
+      try {
+        await _sessionService.saveSession(user);
+        print('✅ [LoginViewModel] Sesión guardada');
+      } catch (e) {
+        print('⚠️ [LoginViewModel] Error al guardar sesión: $e');
+        // Continua mesmo se a sessão não salvar (usuário ainda pode fazer login)
+      }
+
       isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
       errorMessage = e.toString().replaceAll('Exception: ', '');
+      print('❌ [LoginViewModel] Error: $e');
       isLoading = false;
       notifyListeners();
       return false;
@@ -80,6 +91,8 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      print('📝 [LoginViewModel] Iniciando registro para: $email');
+      
       final user = await _userRepository.register(
         email: email,
         password: password,
@@ -88,6 +101,17 @@ class LoginViewModel extends ChangeNotifier {
       );
 
       currentUser = user;
+      print('✅ [LoginViewModel] Registro exitoso para: ${user.email}');
+      
+      // Salvar sessão após registro bem-sucedido
+      try {
+        await _sessionService.saveSession(user);
+        print('✅ [LoginViewModel] Sesión guardada después de registro');
+      } catch (e) {
+        print('⚠️ [LoginViewModel] Error al guardar sesión después de registro: $e');
+        // Continua mesmo se a sessão não salvar
+      }
+
       email = '';
       password = '';
       name = '';
@@ -96,6 +120,7 @@ class LoginViewModel extends ChangeNotifier {
       return true;
     } catch (e) {
       errorMessage = e.toString().replaceAll('Exception: ', '');
+      print('❌ [LoginViewModel] Error en registro: $e');
       isLoadingRegister = false;
       notifyListeners();
       return false;
@@ -120,13 +145,34 @@ class LoginViewModel extends ChangeNotifier {
   }
 
   /// Logout
-  void logout() {
+  Future<void> logout() async {
     currentUser = null;
     email = '';
     password = '';
     name = '';
     errorMessage = null;
+    
+    // Limpar sessão do dispositivo
+    await _sessionService.clearSession();
+    
     notifyListeners();
+  }
+
+  /// Restaurar sessão salva no dispositivo
+  Future<bool> restoreSession() async {
+    try {
+      final user = await _sessionService.restoreSession();
+      if (user != null) {
+        currentUser = user;
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      errorMessage = 'Erro ao restaurar sessão: $e';
+      notifyListeners();
+      return false;
+    }
   }
 
   /// Verificar si hay sesión activa
@@ -169,24 +215,5 @@ class LoginViewModel extends ChangeNotifier {
       notifyListeners();
       return false;
     }
-  }
-  // ---- Só pra debug do login e senha ----
-  Future<void> verificarUsuariosRegistrados() async {
-    // Pega a instância do banco
-    final db = await AppDatabase.instance.database; 
-    
-    // É mais seguro usar a constante do nome da tabela do que digitar 'users' manualmente
-    final List<Map<String, dynamic>> registros = await db.query(DbConstants.tableUsers);
-
-    debugPrint('--- INÍCIO DA LISTA DE USUÁRIOS ---');
-    if (registros.isEmpty) {
-      debugPrint('Nenhum usuário registrado no banco.');
-    } else {
-      for (var usuario in registros) {
-        // Usando os nomes exatos das colunas definidos na sua MigrationV2
-        debugPrint('ID: ${usuario['id']} | Email: ${usuario['email']} | Senha Salva: ${usuario['password_hash']} | Nome: ${usuario['name']}');
-      }
-    }
-    debugPrint('--- FIM DA LISTA DE USUÁRIOS ---');
   }
 }

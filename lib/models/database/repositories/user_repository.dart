@@ -5,6 +5,7 @@ import 'package:sqflite/sqflite.dart';
 
 import '../db_constants.dart';
 import '../app_database.dart';
+import '../web_user_storage.dart';
 
 class User {
   final int id;
@@ -17,6 +18,7 @@ class User {
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? lastLogin;
+  final String? passwordHash; // Para uso interno de autenticación
 
   User({
     required this.id,
@@ -29,6 +31,7 @@ class User {
     required this.createdAt,
     required this.updatedAt,
     this.lastLogin,
+    this.passwordHash,
   });
 
   Map<String, dynamic> toMap() {
@@ -43,6 +46,7 @@ class User {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
       'last_login': lastLogin?.toIso8601String(),
+      'password_hash': passwordHash,
     };
   }
 
@@ -62,12 +66,18 @@ class User {
       lastLogin: map['last_login'] != null
           ? DateTime.parse(map['last_login'] as String)
           : null,
+      passwordHash: map['password_hash'] as String?,
     );
   }
 }
 
 class UserRepository {
+  final _webStorage = WebUserStorage();
+  
   Future<Database> get _db async => AppDatabase.instance.database;
+
+  /// Verificar si está en web
+  bool get _isWeb => kIsWeb;
 
   // Hash de contraseña con salt
   static String _hashPassword(String password, {String? salt}) {
@@ -100,53 +110,86 @@ class UserRepository {
     String? preferredCityCode,
   }) async {
     try {
-      // En web, retornar usuario demo sin usar BD
-      if (kIsWeb) {
-        return User(
-          id: 1,
+      print('📝 Iniciando registro para: $email (Platform: ${_isWeb ? "Web" : "Mobile/Desktop"})');
+      
+      if (_isWeb) {
+        // En web, usar WebUserStorage
+        print('🌐 Usando WebUserStorage para registro');
+        await _webStorage.initialize();
+        
+        // Verificar si el email ya existe
+        print('🔍 Verificando si el email existe...');
+        final existing = await _webStorage.getUserByEmail(email);
+        
+        if (existing != null) {
+          throw Exception('Email ya está registrado');
+        }
+
+        print('✅ Email disponible');
+        final passwordHash = _hashPassword(password);
+
+        print('💾 Insertando usuario en almacenamiento web...');
+        final userId = await _webStorage.saveUser(User(
+          id: 0, // ID temporal, será actualizado
           email: email.toLowerCase(),
+          passwordHash: passwordHash,
           name: name,
           phone: phone,
           preferredCityCode: preferredCityCode,
           subscriptionPlan: 'essential',
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
-          lastLogin: DateTime.now(),
+        ));
+
+        print('✅ Usuario insertado con ID: $userId');
+        final user = await _webStorage.getUserById(userId);
+        print('✅ Registro exitoso para: $email');
+        return user!;
+      } else {
+        // En mobile/desktop, usar SQLite
+        print('📱 Usando SQLite para registro');
+        final db = await _db;
+        print('✅ Banco de datos conectado');
+        
+        final now = DateTime.now().toUtc();
+
+        // Verificar si el email ya existe
+        print('🔍 Verificando si el email existe...');
+        final existing = await db.query(
+          DbConstants.tableUsers,
+          where: 'email = ?',
+          whereArgs: [email.toLowerCase()],
         );
+
+        if (existing.isNotEmpty) {
+          throw Exception('Email ya está registrado');
+        }
+
+        print('✅ Email disponible');
+        final passwordHash = _hashPassword(password);
+
+        print('💾 Insertando usuario en la base de datos...');
+        final userId = await db.insert(
+          DbConstants.tableUsers,
+          {
+            'email': email.toLowerCase(),
+            'password_hash': passwordHash,
+            'name': name,
+            'phone': phone,
+            'preferred_city_code': preferredCityCode,
+            'subscription_plan': 'essential',
+            'created_at': now.toIso8601String(),
+            'updated_at': now.toIso8601String(),
+          },
+        );
+
+        print('✅ Usuario insertado con ID: $userId');
+        final user = await getUserById(userId);
+        print('✅ Registro exitoso para: $email');
+        return user!;
       }
-
-      final db = await _db;
-      final now = DateTime.now().toUtc();
-
-      // Verificar si el email ya existe
-      final existing = await db.query(
-        DbConstants.tableUsers,
-        where: 'email = ?',
-        whereArgs: [email.toLowerCase()],
-      );
-
-      if (existing.isNotEmpty) {
-        throw Exception('Email ya está registrado');
-      }
-
-      final passwordHash = _hashPassword(password);
-
-      final userId = await db.insert(
-        DbConstants.tableUsers,
-        {
-          'email': email.toLowerCase(),
-          'password_hash': passwordHash,
-          'name': name,
-          'phone': phone,
-          'preferred_city_code': preferredCityCode,
-          'subscription_plan': 'essential',
-          'created_at': now.toIso8601String(),
-          'updated_at': now.toIso8601String(),
-        },
-      );
-
-      return (await getUserById(userId))!;
     } catch (e) {
+      print('❌ Error en registro: $e');
       throw Exception('Error al registrar: $e');
     }
   }
@@ -157,67 +200,132 @@ class UserRepository {
     required String password,
   }) async {
     try {
-      // En web, retornar usuario demo sin usar BD
-      if (kIsWeb) {
-        return User(
-          id: 1,
-          email: email.toLowerCase(),
-          name: email.split('@').first,
-          phone: null,
-          preferredCityCode: null,
-          subscriptionPlan: 'essential',
-          createdAt: DateTime.now(),
+      print('🔐 Iniciando login para: $email (Platform: ${_isWeb ? "Web" : "Mobile/Desktop"})');
+      
+      if (_isWeb) {
+        // En web, usar WebUserStorage
+        print('🌐 Usando WebUserStorage para login');
+        await _webStorage.initialize();
+        
+        final user = await _webStorage.getUserByEmail(email);
+        if (user == null) {
+          throw Exception('Usuário não encontrado. Faça o registro primeiro!');
+        }
+
+        print('✅ Usuario encontrado: ${user.email}');
+        print('🔐 passwordHash from DB: ${user.passwordHash}');
+        
+        final storedHash = user.passwordHash;
+        print('🔐 storedHash variable: $storedHash');
+        
+        if (storedHash == null) {
+          print('❌ ERROR: storedHash é null! O passwordHash não foi salvo corretamente');
+          throw Exception('Senha não está configurada para este usuário');
+        }
+        
+        if (!_verifyPassword(password, storedHash)) {
+          print('❌ Verificação de senha falhou');
+          print('   Password fornecida: $password');
+          print('   Hash armazenado: $storedHash');
+          throw Exception('Senha incorreta');
+        }
+
+        print('✅ Senha verificada corretamente!');
+        // Actualizar último login
+        final updatedUser = User(
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          phone: user.phone,
+          preferredCityCode: user.preferredCityCode,
+          subscriptionPlan: user.subscriptionPlan,
+          subscriptionEndDate: user.subscriptionEndDate,
+          createdAt: user.createdAt,
           updatedAt: DateTime.now(),
           lastLogin: DateTime.now(),
+          passwordHash: storedHash, // Mantener el hash
         );
+        
+        await _webStorage.updateUser(updatedUser);
+        print('✅ Login bem-sucedido para: $email (Web)');
+        return updatedUser;
+      } else {
+        // En mobile/desktop, usar SQLite
+        print('📱 Usando SQLite para login');
+        final db = await _db;
+        print('✅ Banco de datos conectado');
+        
+        final result = await db.query(
+          DbConstants.tableUsers,
+          where: 'email = ?',
+          whereArgs: [email.toLowerCase()],
+        );
+        print('📊 Resultado da query: ${result.length} registros encontrados');
+
+        if (result.isEmpty) {
+          throw Exception('Usuário não encontrado. Faça o registro primeiro!');
+        }
+
+        final record = result.first;
+        final storedHash = record['password_hash'] as String;
+
+        if (!_verifyPassword(password, storedHash)) {
+          throw Exception('Senha incorreta');
+        }
+
+        // Actualizar último login
+        final now = DateTime.now().toUtc().toIso8601String();
+        await db.update(
+          DbConstants.tableUsers,
+          {'last_login': now},
+          where: 'id = ?',
+          whereArgs: [record['id']],
+        );
+
+        print('✅ Login bem-sucedido para: $email');
+        return User.fromMap(record);
       }
-
-      final db = await _db;
-      final result = await db.query(
-        DbConstants.tableUsers,
-        where: 'email = ? AND is_active = 1',
-        whereArgs: [email.toLowerCase()],
-      );
-
-      if (result.isEmpty) {
-        throw Exception('Usuario no encontrado');
-      }
-
-      final record = result.first;
-      final storedHash = record['password_hash'] as String;
-
-      if (!_verifyPassword(password, storedHash)) {
-        throw Exception('Contraseña incorrecta');
-      }
-
-      // Actualizar último login
-      final now = DateTime.now().toUtc().toIso8601String();
-      await db.update(
-        DbConstants.tableUsers,
-        {'last_login': now},
-        where: 'id = ?',
-        whereArgs: [record['id']],
-      );
-
-      return User.fromMap(record);
     } catch (e) {
-      throw Exception('Error en login: $e');
+      print('❌ Erro no login: $e');
+      throw Exception('Erro no login: $e');
     }
   }
 
   // Obtener usuario por ID
   Future<User?> getUserById(int userId) async {
     try {
-      final db = await _db;
-      final result = await db.query(
-        DbConstants.tableUsers,
-        where: 'id = ?',
-        whereArgs: [userId],
-      );
+      print('🔍 Buscando usuario con ID: $userId');
+      
+      if (_isWeb) {
+        // En web, usar WebUserStorage
+        print('🌐 Usando WebUserStorage para obtener usuario');
+        await _webStorage.initialize();
+        final user = await _webStorage.getUserById(userId);
+        if (user != null) {
+          print('✅ Usuario encontrado: ID $userId (Web)');
+        } else {
+          print('⚠️ Usuario con ID $userId no encontrado (Web)');
+        }
+        return user;
+      } else {
+        // En mobile/desktop, usar SQLite
+        print('📱 Usando SQLite para obtener usuario');
+        final db = await _db;
+        final result = await db.query(
+          DbConstants.tableUsers,
+          where: 'id = ?',
+          whereArgs: [userId],
+        );
 
-      if (result.isEmpty) return null;
-      return User.fromMap(result.first);
+        if (result.isEmpty) {
+          print('⚠️ Usuario con ID $userId no encontrado');
+          return null;
+        }
+        print('✅ Usuario encontrado: ID $userId');
+        return User.fromMap(result.first);
+      }
     } catch (e) {
+      print('❌ Error al obtener usuario: $e');
       throw Exception('Error al obtener usuario: $e');
     }
   }

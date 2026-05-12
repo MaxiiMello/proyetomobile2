@@ -81,7 +81,6 @@ class _MapScreenState extends State<MapScreen> {
                 ),
                 onMapCreated: (controller) {
                   _mapController = controller;
-                  _mapsService.setMapController(controller);
                 },
                 myLocationEnabled: true,
                 myLocationButtonEnabled: false,
@@ -130,12 +129,14 @@ class _MapScreenState extends State<MapScreen> {
                     await viewModel.requestGPSLocation();
                     if (viewModel.currentLatitude != 0 &&
                         viewModel.currentLongitude != 0) {
-                      await _mapsService.moveCameraTo(
-                        LatLng(
-                          viewModel.currentLatitude,
-                          viewModel.currentLongitude,
+                      // Mover câmera para localização atual usando Google Maps
+                      await _mapController.animateCamera(
+                        CameraUpdate.newLatLng(
+                          LatLng(
+                            viewModel.currentLatitude,
+                            viewModel.currentLongitude,
+                          ),
                         ),
-                        zoom: viewModel.zoomLevel,
                       );
                     }
                   },

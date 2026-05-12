@@ -41,7 +41,11 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _handleLogin(LoginViewModel viewModel) async {
+  void _handleLogin(LoginViewModel viewModel) {
+    _performLogin(viewModel);
+  }
+
+  Future<void> _performLogin(LoginViewModel viewModel) async {
     final success = await viewModel.loginWithEmail(
       emailController.text.trim(),
       passwordController.text,
@@ -52,7 +56,11 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _handleRegister(LoginViewModel viewModel) async {
+  void _handleRegister(LoginViewModel viewModel) {
+    _performRegister(viewModel);
+  }
+
+  Future<void> _performRegister(LoginViewModel viewModel) async {
     final success = await viewModel.registerUser(
       emailInput: emailController.text.trim(),
       passwordInput: passwordController.text,
@@ -455,12 +463,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ],
                           ),
                           const SizedBox(height: 20),
-                          ElevatedButton(
-                            onPressed: () {
-                              context.read<LoginViewModel>().verificarUsuariosRegistrados();
-                            },
-                            child: const Text('DEBUG: Imprimir Usuários'),
-                          ),
+
 
                           // Google Button
                           SizedBox(

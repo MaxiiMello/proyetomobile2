@@ -13,6 +13,9 @@ class AppDatabase {
   Database? _database;
 
   Future<Database> get database async {
+    if (kIsWeb) {
+      throw Exception('SQLite is not available on web. Use WebUserStorage instead.');
+    }
     if (_database != null) {
       return _database!;
     }
