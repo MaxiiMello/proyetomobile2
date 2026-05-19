@@ -1,4 +1,5 @@
 /// Modelos para armazenamento local de dados de ruas e nós do grafo
+library;
 
 class RuaBD {
   final String id;

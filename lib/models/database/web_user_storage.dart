@@ -319,7 +319,7 @@ class WebUserStorage {
       // Verificar que SharedPreferences está inicializado
       print('\n🔍 Verificando SharedPreferences...');
       print('   _prefs inicializado: $_isInitialized');
-      print('   _prefs es nulo: ${_prefs == null ? "SÍ (ERROR!)" : "NO (OK)"}');
+      print('   _prefs es nulo: ${"NO (OK)"}');
       
       // GUARDAR DATOS
       print('\n💾 Ejecutando _prefs.setString()...');

@@ -6,7 +6,7 @@ import '../../services/maps_service.dart';
 import '../../viewmodels/map_viewmodel.dart';
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({Key? key}) : super(key: key);
+  const MapScreen({super.key});
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -165,9 +165,9 @@ class SearchBar extends StatefulWidget {
   final MapViewModel viewModel;
 
   const SearchBar({
-    Key? key,
+    super.key,
     required this.viewModel,
-  }) : super(key: key);
+  });
 
   @override
   State<SearchBar> createState() => _SearchBarState();

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
+import 'dart:math' as math;
 
 import '../../../services/maps_service.dart';
 import '../../../viewmodels/map_viewmodel.dart';
@@ -15,17 +16,24 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  MapController? _mapController = MapController();
+  final MapController? _mapController = MapController();
   final MapsService _mapsService = MapsService.instance;
   late TextEditingController _startController;
   late TextEditingController _endController;
   bool _initialized = false;
+  LatLng? _downloadCenter;
+  double _downloadRadiusKm = 2.0;
+  bool _downloadSelectionActive = false;
+  LatLng? _lastNavigationCenter;
 
   @override
   void initState() {
     super.initState();
     _startController = TextEditingController();
     _endController = TextEditingController();
+    if (_mapController != null) {
+      _mapsService.setMapController(_mapController!);
+    }
     
     // Listener para buscar sugestões de origem
     _startController.addListener(() {
@@ -95,6 +103,176 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  LatLng _getMapCenter(MapViewModel viewModel) {
+    if (_mapController == null) {
+      return LatLng(viewModel.currentLatitude, viewModel.currentLongitude);
+    }
+    return _mapController!.camera.center;
+  }
+
+  void _centerOnUserIfNavigating(MapViewModel viewModel) {
+    if (!viewModel.isNavigating || _mapController == null) {
+      return;
+    }
+
+    final current = LatLng(
+      viewModel.currentLatitude,
+      viewModel.currentLongitude,
+    );
+
+    if (_lastNavigationCenter != null &&
+        _lastNavigationCenter!.latitude == current.latitude &&
+        _lastNavigationCenter!.longitude == current.longitude) {
+      return;
+    }
+
+    _lastNavigationCenter = current;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _mapController!.move(current, viewModel.zoomLevel);
+    });
+  }
+
+  Future<void> _handleDownload(MapViewModel viewModel) async {
+    final center = _downloadCenter ?? _getMapCenter(viewModel);
+
+    await viewModel.downloadQuadroAt(
+      latitude: center.latitude,
+      longitude: center.longitude,
+      radiusKm: _downloadRadiusKm,
+    );
+
+    if (!mounted) return;
+    final message = viewModel.downloadStatusMessage;
+    if (message == null) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: message.startsWith('Erro')
+            ? Colors.red[700]
+            : Colors.green[700],
+      ),
+    );
+  }
+
+  void _openDownloadSheet(MapViewModel viewModel) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final center = _downloadCenter ?? _getMapCenter(viewModel);
+
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                16 + MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Download de quadro offline',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Centro: ${center.latitude.toStringAsFixed(5)}, '
+                    '${center.longitude.toStringAsFixed(5)}',
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 12,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          final mapCenter = _getMapCenter(viewModel);
+                          setState(() {
+                            _downloadCenter = mapCenter;
+                          });
+                          setModalState(() {});
+                        },
+                        icon: const Icon(Icons.center_focus_strong, size: 18),
+                        label: const Text('Usar centro do mapa'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _downloadSelectionActive = true;
+                          });
+                          Navigator.pop(context);
+                        },
+                        icon: const Icon(Icons.touch_app, size: 18),
+                        label: const Text('Selecionar no mapa'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text('Raio: ${_downloadRadiusKm.toStringAsFixed(1)} km'),
+                  Slider(
+                    value: _downloadRadiusKm,
+                    min: 1.0,
+                    max: 10.0,
+                    divisions: 18,
+                    label: '${_downloadRadiusKm.toStringAsFixed(1)} km',
+                    onChanged: (value) {
+                      setModalState(() {
+                        _downloadRadiusKm = value;
+                      });
+                    },
+                  ),
+                  if (viewModel.isDownloadingQuadro)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: LinearProgressIndicator(),
+                    ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: viewModel.isDownloadingQuadro
+                          ? null
+                          : () => _handleDownload(viewModel),
+                      icon: const Icon(Icons.download),
+                      label: const Text('Baixar quadro'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1B7E3D),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (kIsWeb)
+                    Text(
+                      'Download offline nao esta disponivel no Web.',
+                      style: TextStyle(color: Colors.red[700]),
+                    ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -106,6 +284,7 @@ class _MapScreenState extends State<MapScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Consumer<MapViewModel>(
                 builder: (context, viewModel, _) {
+                  _centerOnUserIfNavigating(viewModel);
                   return Column(
                     children: [
                       // Campo de ORIGEM
@@ -516,12 +695,104 @@ class _MapScreenState extends State<MapScreen> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    'Dica: Use o botão 👆 para clicar no mapa\n(mais rápido e sem limite de requisições)',
+                                    'Dica: Use o botao 👆 para clicar no mapa\n(mais rapido e sem limite de requisicoes)',
                                     style: TextStyle(
                                       color: Colors.blue[600],
                                       fontSize: 12,
                                     ),
                                     maxLines: 2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (viewModel.rotaCalculada != null &&
+                          viewModel.rotaCalculada!.temRota)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10.0),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: viewModel.isNavigating
+                                    ? Colors.red[600]
+                                    : Colors.green[700],
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              onPressed: () async {
+                                if (viewModel.isNavigating) {
+                                  await viewModel.stopNavigation();
+                                  return;
+                                }
+                                await viewModel.startNavigation();
+                              },
+                              icon: Icon(
+                                viewModel.isNavigating
+                                    ? Icons.stop
+                                    : Icons.navigation,
+                                color: Colors.white,
+                                size: 18,
+                              ),
+                              label: Text(
+                                viewModel.isNavigating
+                                    ? 'Parar rota'
+                                    : 'Iniciar rota',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      if (viewModel.rotaCalculada != null &&
+                          viewModel.rotaCalculada!.temRota)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Container(
+                            padding: const EdgeInsets.all(12.0),
+                            decoration: BoxDecoration(
+                              color: Colors.green[50],
+                              border: Border.all(
+                                color: Colors.green[200]!,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.route,
+                                  color: Colors.green[700],
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Distancia: ${viewModel.distanciaKmLabel}',
+                                        style: TextStyle(
+                                          color: Colors.green[700],
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Text(
+                                        'Tempo medio (40 km/h): ${viewModel.tempoMedioLabel}',
+                                        style: TextStyle(
+                                          color: Colors.green[700],
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -570,18 +841,27 @@ class _MapScreenState extends State<MapScreen> {
                                 viewModel.zoomLevel = position.zoom;
                               },
                               onTap: (tapPosition, point) async {
+                                if (_downloadSelectionActive) {
+                                  setState(() {
+                                    _downloadCenter = point;
+                                    _downloadSelectionActive = false;
+                                  });
+                                  return;
+                                }
+
                                 // Processar clique no mapa
                                 if (viewModel.mapClickMode != null) {
+                                  final selectionMode = viewModel.mapClickMode;
                                   await viewModel.handleMapClick(
                                     point.latitude,
                                     point.longitude,
                                   );
                                   // Atualizar controllers após reverse geocoding
-                                  if (viewModel.mapClickMode == 0 &&
+                                  if (selectionMode == 0 &&
                                       viewModel.startAddress != null) {
                                     _startController.text =
                                         viewModel.startAddress!;
-                                  } else if (viewModel.mapClickMode == 1 &&
+                                  } else if (selectionMode == 1 &&
                                       viewModel.endAddress != null) {
                                     _endController.text = viewModel.endAddress!;
                                   }
@@ -595,6 +875,56 @@ class _MapScreenState extends State<MapScreen> {
                                     'https://maps.geoapify.com/v1/tile/toner-grey/{z}/{x}/{y}.png?apiKey=602b6e2908704777bc047e4ebcaba003',
                                 userAgentPackageName: 'com.sinalverde.app',
                               ),
+                              MarkerLayer(
+                                markers: [
+                                  Marker(
+                                    point: LatLng(
+                                      viewModel.currentLatitude,
+                                      viewModel.currentLongitude,
+                                    ),
+                                    width: 36,
+                                    height: 36,
+                                    child: Transform.rotate(
+                                      angle: ((viewModel.currentHeading ?? 0) *
+                                              math.pi) /
+                                          180,
+                                      child: const Icon(
+                                        Icons.navigation,
+                                        color: Colors.blue,
+                                        size: 30,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (_downloadCenter != null)
+                                CircleLayer(
+                                  circles: [
+                                    CircleMarker(
+                                      point: _downloadCenter!,
+                                      radius: _downloadRadiusKm * 1000,
+                                      useRadiusInMeter: true,
+                                      color: Colors.blue.withValues(alpha: 0.1),
+                                      borderColor: Colors.blue[600]!,
+                                      borderStrokeWidth: 1,
+                                    ),
+                                  ],
+                                ),
+                              if (_downloadCenter != null)
+                                MarkerLayer(
+                                  markers: [
+                                    Marker(
+                                      point: _downloadCenter!,
+                                      width: 40,
+                                      height: 40,
+                                      child: const Icon(
+                                        Icons.download_for_offline,
+                                        color: Colors.blue,
+                                        size: 32,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               // Traçado da rota calculada
                               if (viewModel.rotaCalculada != null &&
                                   viewModel.rotaCalculada!.caminhoFinal
@@ -725,6 +1055,18 @@ class _MapScreenState extends State<MapScreen> {
                             child: Column(
                               children: [
                                 FloatingActionButton(
+                                  heroTag: 'download_tile',
+                                  backgroundColor: Colors.blue[600],
+                                  mini: true,
+                                  onPressed: () => _openDownloadSheet(viewModel),
+                                  child: const Icon(
+                                    Icons.download,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                FloatingActionButton(
                                   heroTag: 'center',
                                   backgroundColor: const Color(0xFF1B7E3D),
                                   mini: true,
@@ -821,6 +1163,44 @@ class _MapScreenState extends State<MapScreen> {
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
                                         ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          if (_downloadSelectionActive)
+                            Positioned(
+                              top: 16,
+                              left: 16,
+                              right: 16,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[700],
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.3),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
+                                ),
+                                child: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.download,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'Clique no mapa para definir o centro do quadro',
+                                        style: TextStyle(color: Colors.white),
                                       ),
                                     ),
                                   ],

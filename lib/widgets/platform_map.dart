@@ -13,7 +13,7 @@ class PlatformMap extends StatelessWidget {
   final bool mapToolbarEnabled;
 
   const PlatformMap({
-    Key? key,
+    super.key,
     required this.initialCameraPosition,
     this.onMapCreated,
     this.onCameraMove,
@@ -21,7 +21,7 @@ class PlatformMap extends StatelessWidget {
     this.myLocationButtonEnabled = false,
     this.zoomControlsEnabled = false,
     this.mapToolbarEnabled = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

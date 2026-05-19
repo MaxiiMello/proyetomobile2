@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 import 'dart:math';
+import 'dart:async';
 
 import '../models/database/repositories/user_repository.dart';
 import '../services/gps_service.dart' show GpsService, LocationData;
 import '../services/address_service.dart' show AddressService;
 import '../services/routing_service.dart' show RoutingService;
+import '../services/roads_download_service.dart' show RoadsDownloadService;
 import '../services/tile_manager_service.dart' show TileManagerService;
 import '../models/route_models.dart' show ResultadoRota, DadosRota;
 
@@ -14,6 +16,7 @@ class MapViewModel extends ChangeNotifier {
   final AddressService _addressService = AddressService();
   final RoutingService _routingService = RoutingService();
   final TileManagerService _tileManager = TileManagerService();
+  final RoadsDownloadService _roadsDownloadService = RoadsDownloadService();
 
   double currentLatitude = -30.8936; // Santana do Livramento, RS
   double currentLongitude = -55.5205;
@@ -24,6 +27,7 @@ class MapViewModel extends ChangeNotifier {
   bool isNavigating = false;
   String? errorMessage;
   User? currentUser;
+  double? currentHeading;
 
   // Propriedades para sugestões de endereços
   List<String> addressSuggestions = [];
@@ -51,6 +55,16 @@ class MapViewModel extends ChangeNotifier {
   DadosRota? dadosRotaUI;
   bool isCalculatingRoute = false;
   bool grafoInicializado = false;
+  bool isDownloadingQuadro = false;
+  String? downloadStatusMessage;
+  double? _graphCenterLatitude;
+  double? _graphCenterLongitude;
+  StreamSubscription<LocationData>? _navigationSubscription;
+  bool _isRecalculating = false;
+  DateTime? _lastRecalcTime;
+  static const double _recalcThresholdMeters = 30;
+  static const Duration _recalcCooldown = Duration(seconds: 10);
+  static const double _averageSpeedKmh = 40.0;
 
   MapViewModel({User? user}) {
     currentUser = user;
@@ -71,8 +85,8 @@ class MapViewModel extends ChangeNotifier {
     _routingService.limpar();
 
     // Coordenadas de Santana do Livramento (Brasil)
-    double latBase = -30.8936;
-    double lonBase = -55.5205;
+    final latBase = _graphCenterLatitude ?? -30.8936;
+    final lonBase = _graphCenterLongitude ?? -55.5205;
 
     print('═' * 60);
     print('🔧 INICIALIZANDO GRAFO COM DADOS REAIS');
@@ -134,6 +148,7 @@ class MapViewModel extends ChangeNotifier {
       
       currentLatitude = location.latitude;
       currentLongitude = location.longitude;
+      currentHeading = location.heading;
     
       isLoadingMap = false;
       notifyListeners();
@@ -400,8 +415,119 @@ class MapViewModel extends ChangeNotifier {
         .map((location) {
       currentLatitude = location.latitude;
       currentLongitude = location.longitude;
+      currentHeading = location.heading;
       notifyListeners();
     });
+  }
+
+  /// Iniciar navegacao em tempo real
+  Future<void> startNavigation() async {
+    if (endLatitude == null || endLongitude == null) {
+      errorMessage = 'Defina um destino antes de iniciar a rota.';
+      notifyListeners();
+      return;
+    }
+
+    if (!grafoInicializado) {
+      errorMessage = 'Grafo nao foi inicializado. Tente novamente.';
+      notifyListeners();
+      return;
+    }
+
+    isNavigating = true;
+    errorMessage = null;
+    notifyListeners();
+
+    // Usar posicao atual como origem
+    startLatitude = currentLatitude;
+    startLongitude = currentLongitude;
+    startAddress = 'Posicao atual';
+    _checkCompleteRoute();
+
+    await calcularMelhorRota();
+
+    await _navigationSubscription?.cancel();
+    _navigationSubscription = _gpsService
+        .getLocationStream(distanceFilter: 5)
+        .listen(_handleNavigationLocation, onError: (error) {
+      errorMessage = 'Erro no GPS: $error';
+      notifyListeners();
+    });
+  }
+
+  void _handleNavigationLocation(LocationData location) {
+    if (!isNavigating) return;
+
+    currentLatitude = location.latitude;
+    currentLongitude = location.longitude;
+    currentHeading = location.heading;
+    notifyListeners();
+
+    _maybeRecalculateRoute();
+  }
+
+  Future<void> _maybeRecalculateRoute() async {
+    if (_isRecalculating || isCalculatingRoute) {
+      return;
+    }
+
+    if (rotaCalculada == null || rotaCalculada!.caminhoFinal.isEmpty) {
+      return;
+    }
+
+    final now = DateTime.now();
+    if (_lastRecalcTime != null &&
+        now.difference(_lastRecalcTime!) < _recalcCooldown) {
+      return;
+    }
+
+    final distanceMeters = _distanceToRouteMeters(
+      currentLatitude,
+      currentLongitude,
+    );
+
+    if (distanceMeters <= _recalcThresholdMeters) {
+      return;
+    }
+
+    _isRecalculating = true;
+    _lastRecalcTime = now;
+
+    startLatitude = currentLatitude;
+    startLongitude = currentLongitude;
+    await calcularMelhorRota();
+
+    _isRecalculating = false;
+  }
+
+  double _distanceToRouteMeters(double latitude, double longitude) {
+    final points = buildRoutePoints();
+    if (points.isEmpty) {
+      return double.infinity;
+    }
+
+    var minMeters = double.infinity;
+    for (final point in points) {
+      final km = _calcularDistancia(
+        latitude,
+        longitude,
+        point.latitude,
+        point.longitude,
+      );
+      final meters = km * 1000;
+      if (meters < minMeters) {
+        minMeters = meters;
+      }
+    }
+
+    return minMeters;
+  }
+
+  Future<void> stopNavigation() async {
+    isNavigating = false;
+    await _navigationSubscription?.cancel();
+    _navigationSubscription = null;
+    notifyListeners();
   }
 
   /// Calcular a melhor rota usando A*
@@ -491,6 +617,49 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Baixar quadro offline e persistir geometria real das ruas
+  Future<void> downloadQuadroAt({
+    required double latitude,
+    required double longitude,
+    required double radiusKm,
+  }) async {
+    if (kIsWeb) {
+      downloadStatusMessage =
+          'Download offline nao esta disponivel no Web.';
+      notifyListeners();
+      return;
+    }
+
+    isDownloadingQuadro = true;
+    downloadStatusMessage = null;
+    notifyListeners();
+
+    try {
+      final roads = await _roadsDownloadService.downloadRoads(
+        latitude: latitude,
+        longitude: longitude,
+        radiusKm: radiusKm,
+      );
+
+      await _tileManager.importarGeometriaQuadro(
+        latitude,
+        longitude,
+        roads,
+      );
+
+      _graphCenterLatitude = latitude;
+      _graphCenterLongitude = longitude;
+      await _inicializarGrafo();
+
+      downloadStatusMessage = 'Quadro baixado com sucesso.';
+    } catch (e) {
+      downloadStatusMessage = 'Erro ao baixar quadro: $e';
+    } finally {
+      isDownloadingQuadro = false;
+      notifyListeners();
+    }
+  }
+
   /// Converter caminho final em pontos geograficos usando o grafo carregado
   List<LatLng> buildRoutePoints() {
     final pontos = <LatLng>[];
@@ -566,5 +735,41 @@ class MapViewModel extends ChangeNotifier {
     rotaCalculada = null;
     dadosRotaUI = null;
     notifyListeners();
+  }
+
+  String get distanciaKmLabel {
+    final distance = rotaCalculada?.distanciaKm;
+    if (distance == null) {
+      return '--';
+    }
+    return '${distance.toStringAsFixed(2)} km';
+  }
+
+  String get tempoMedioLabel {
+    final distance = rotaCalculada?.distanciaKm;
+    if (distance == null) {
+      return '--';
+    }
+    final minutes = (distance / _averageSpeedKmh) * 60;
+    return _formatMinutes(minutes);
+  }
+
+  String _formatMinutes(double minutes) {
+    if (!minutes.isFinite || minutes < 0) {
+      return '--';
+    }
+    final totalMinutes = minutes.ceil();
+    final hours = totalMinutes ~/ 60;
+    final mins = totalMinutes % 60;
+    if (hours > 0) {
+      return '${hours}h ${mins}min';
+    }
+    return '${mins} min';
+  }
+
+  @override
+  void dispose() {
+    _navigationSubscription?.cancel();
+    super.dispose();
   }
 }

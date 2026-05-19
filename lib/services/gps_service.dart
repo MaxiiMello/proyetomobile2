@@ -9,6 +9,7 @@ class LocationData {
   final DateTime timestamp;
   final double? altitude;
   final double? speed;
+  final double? heading;
 
   LocationData({
     required this.latitude,
@@ -17,10 +18,12 @@ class LocationData {
     required this.timestamp,
     this.altitude,
     this.speed,
+    this.heading,
   });
 
   @override
-  String toString() => 'LocationData(lat: $latitude, lng: $longitude, acc: $accuracy)';
+  String toString() =>
+      'LocationData(lat: $latitude, lng: $longitude, acc: $accuracy, heading: $heading)';
 }
 
 class GpsService {
@@ -104,6 +107,7 @@ class GpsService {
         ),
         altitude: position.altitude,
         speed: position.speed,
+        heading: position.heading,
       );
     } catch (e) {
       throw Exception('Error en GPS Service: $e');
@@ -129,6 +133,7 @@ class GpsService {
         ),
         altitude: position.altitude,
         speed: position.speed,
+        heading: position.heading,
       );
     } catch (e) {
       return null;
@@ -155,6 +160,7 @@ class GpsService {
         ),
         altitude: position.altitude,
         speed: position.speed,
+        heading: position.heading,
       ),
     );
   }
