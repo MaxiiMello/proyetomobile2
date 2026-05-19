@@ -602,8 +602,7 @@ class _MapScreenState extends State<MapScreen> {
                                 PolylineLayer(
                                   polylines: [
                                     Polyline(
-                                      points:
-                                          _gerarPontosRota(viewModel),
+                                        points: viewModel.buildRoutePoints(),
                                       color: Colors.green[700]!,
                                       strokeWidth: 4.0,
                                       borderStrokeWidth: 1.0,
@@ -951,48 +950,4 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  /// Construir lista de pontos de latitude/longitude da rota
-  List<LatLng> _gerarPontosRota(MapViewModel viewModel) {
-    List<LatLng> pontos = [];
-    
-    if (viewModel.rotaCalculada == null ||
-        viewModel.rotaCalculada!.caminhoFinal.isEmpty) {
-      print('⚠️ Rota vazia ou null');
-      return pontos;
-    }
-
-    // Para cada nó do caminho, extrair coordenadas do ID (formato: "lat_lon")
-    for (int i = 0; i < viewModel.rotaCalculada!.caminhoFinal.length; i++) {
-      String noId = viewModel.rotaCalculada!.caminhoFinal[i];
-      
-      try {
-        // Node IDs are in format: "lat_lon" (e.g., "-30.90065_-55.53355")
-        // Find the last underscore to split correctly (handles negative coordinates)
-        int lastUnderscoreIndex = noId.lastIndexOf('_');
-        if (lastUnderscoreIndex <= 0 || lastUnderscoreIndex >= noId.length - 1) {
-          print('⚠️ ID inválido: $noId');
-          continue;
-        }
-
-        String latStr = noId.substring(0, lastUnderscoreIndex);
-        String lonStr = noId.substring(lastUnderscoreIndex + 1);
-
-        double lat = double.parse(latStr);
-        double lon = double.parse(lonStr);
-
-        pontos.add(LatLng(lat, lon));
-        
-        if (i == 0 || i == viewModel.rotaCalculada!.caminhoFinal.length - 1) {
-          print(
-            '📍 Ponto ${i == 0 ? "INÍCIO" : "FIM"}: $noId → Lat: $lat, Lon: $lon',
-          );
-        }
-      } catch (e) {
-        print('❌ Erro ao processar nó $noId: $e');
-      }
-    }
-
-    print('✅ Gerados ${pontos.length} pontos para a rota');
-    return pontos;
-  }
 }

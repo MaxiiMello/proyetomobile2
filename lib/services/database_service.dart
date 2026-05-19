@@ -3,6 +3,8 @@ import 'package:path/path.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:math' as math;
 import 'dart:async';
+import 'dart:io';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import '../models/database_models.dart';
 
 class DatabaseService {
@@ -26,6 +28,23 @@ class DatabaseService {
   /// Get the last error message
   static String? get lastError => _lastError;
 
+  static bool _ffiInitialized = false;
+
+  static Future<void> ensureInitialized() async {
+    if (_ffiInitialized) return;
+
+    if (!kIsWeb &&
+        (Platform.isWindows ||
+         Platform.isLinux ||
+         Platform.isMacOS)) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+      debugPrint('✅ databaseFactory configurado no DatabaseService');
+    }
+
+    _ffiInitialized = true;
+  }
+
   Future<Database?> get database async {
     if (!_isAvailable) {
       return null; // Database not available, will use memory fallback
@@ -43,11 +62,19 @@ class DatabaseService {
   }
 
   Future<Database> _initDatabase() async {
+    await ensureInitialized();
+
     String path = join(await getDatabasesPath(), 'sinal_verde.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createTables,
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute(
+              'ALTER TABLE ruas ADD COLUMN oneWay INTEGER NOT NULL DEFAULT 0');
+        }
+      },
     );
   }
 
@@ -89,6 +116,7 @@ class DatabaseService {
         tipo TEXT NOT NULL,
         temSemafo INTEGER NOT NULL,
         velocidadekmh INTEGER NOT NULL,
+        oneWay INTEGER NOT NULL DEFAULT 0,
         tileId TEXT NOT NULL,
         FOREIGN KEY(tileId) REFERENCES quadros_geograficos(id)
       )

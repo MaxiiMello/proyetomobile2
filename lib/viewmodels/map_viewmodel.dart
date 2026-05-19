@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:latlong2/latlong.dart';
 import 'dart:math';
 
 import '../models/database/repositories/user_repository.dart';
@@ -488,6 +489,28 @@ class MapViewModel extends ChangeNotifier {
 
     isCalculatingRoute = false;
     notifyListeners();
+  }
+
+  /// Converter caminho final em pontos geograficos usando o grafo carregado
+  List<LatLng> buildRoutePoints() {
+    final pontos = <LatLng>[];
+
+    if (rotaCalculada == null || rotaCalculada!.caminhoFinal.isEmpty) {
+      debugPrint('⚠️ Rota vazia ou null');
+      return pontos;
+    }
+
+    for (final noId in rotaCalculada!.caminhoFinal) {
+      final no = _routingService.grafo[noId];
+      if (no == null) {
+        debugPrint('⚠️ Nó não encontrado no grafo: $noId');
+        continue;
+      }
+      pontos.add(LatLng(no.latitude, no.longitude));
+    }
+
+    debugPrint('✅ Gerados ${pontos.length} pontos para a rota');
+    return pontos;
   }
 
   /// Encontrar o nó mais próximo de uma coordenada

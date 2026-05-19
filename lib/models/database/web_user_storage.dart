@@ -182,15 +182,8 @@ class WebUserStorage {
         orElse: () => null as User,
       );
       
-      if (found != null) {
-        print('✅ Usuario encontrado: ${found.email}');
-      } else {
-        print('❌ Usuario NO encontrado. Emails disponibles:');
-        for (var user in users) {
-          print('   - ${user.email}');
-        }
-      }
-      
+      print('✅ Usuario encontrado: ${found.email}');
+          
       return found;
     } catch (e) {
       print('❌ Error al obtener usuario por email: $e');
@@ -210,15 +203,8 @@ class WebUserStorage {
         orElse: () => null as User,
       );
       
-      if (found != null) {
-        print('✅ Usuario encontrado: ${found.email} (ID: $id)');
-      } else {
-        print('❌ Usuario NO encontrado (ID: $id). IDs disponibles:');
-        for (var user in users) {
-          print('   - ID ${user.id}: ${user.email}');
-        }
-      }
-      
+      print('✅ Usuario encontrado: ${found.email} (ID: $id)');
+          
       return found;
     } catch (e) {
       print('❌ Error al obtener usuario por ID: $e');

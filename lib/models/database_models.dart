@@ -11,6 +11,7 @@ class RuaBD {
   final String tipo; // asfalto, terra, paralelepípedo, etc
   final bool temSemafo;
   final int velocidadekmh;
+  final bool oneWay;
   final String tileId; // identificador do quadro geográfico
 
   RuaBD({
@@ -24,6 +25,7 @@ class RuaBD {
     required this.tipo,
     required this.temSemafo,
     required this.velocidadekmh,
+    this.oneWay = false,
     required this.tileId,
   });
 
@@ -39,6 +41,7 @@ class RuaBD {
       'tipo': tipo,
       'temSemafo': temSemafo ? 1 : 0,
       'velocidadekmh': velocidadekmh,
+      'oneWay': oneWay ? 1 : 0,
       'tileId': tileId,
     };
   }
@@ -55,6 +58,7 @@ class RuaBD {
       tipo: map['tipo'] as String,
       temSemafo: (map['temSemafo'] as int) == 1,
       velocidadekmh: map['velocidadekmh'] as int,
+      oneWay: ((map['oneWay'] as num?) ?? 0).toInt() == 1,
       tileId: map['tileId'] as String,
     );
   }

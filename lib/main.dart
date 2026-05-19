@@ -22,41 +22,48 @@ Future<void> main() async {
 
   // Initialize SQLite based on the specific platform
   if (kIsWeb) {
-    // Flutter Web - NO necesita sqflite, usa WebUserStorage + SharedPreferences
-    debugPrint('🌐 Ejecutando en WEB - usando WebUserStorage con SharedPreferences');
-    debugPrint('⏭️ Saltando inicialización de sqflite para web');
-    
-    // Initialize web storage BEFORE anything else
+    // Flutter Web - não usa sqflite
+    debugPrint('🌐 Executando em WEB - usando WebUserStorage com SharedPreferences');
+    debugPrint('⏭️ Pulando inicialização do sqflite para web');
+
     try {
       debugPrint('🔧 Inicializando WebUserStorage...');
       await WebUserStorage().initialize();
-      debugPrint('✅ WebUserStorage inicializado correctamente');
+      debugPrint('✅ WebUserStorage inicializado corretamente');
     } catch (e) {
-      debugPrint('⚠️ Error inicializando WebUserStorage: $e');
+      debugPrint('⚠️ Erro inicializando WebUserStorage: $e');
     }
   } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    // Desktop platforms - usa sqflite
-    debugPrint('🖥️ Ejecutando en DESKTOP - usando sqflite');
+    // Desktop - obrigatório inicializar sqflite_common_ffi
+    debugPrint('🖥️ Executando em DESKTOP - usando sqflite_common_ffi');
+
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+
+    debugPrint('✅ databaseFactory inicializado com databaseFactoryFfi');
   } else {
-    // Mobile platforms - usa sqflite
-    debugPrint('📱 Ejecutando en MOBILE - usando sqflite');
+    // Android/iOS - sqflite funciona automaticamente
+    debugPrint('📱 Executando em MOBILE - usando sqflite');
   }
 
+  // Inicializar banco
   try {
+    debugPrint('🔧 Inicializando DatabaseBootstrap...');
     await DatabaseBootstrap.initialize();
-  } catch (e) {
-    debugPrint('Database initialization skipped: $e');
+    debugPrint('✅ DatabaseBootstrap inicializado com sucesso');
+  } catch (e, stackTrace) {
+    debugPrint('❌ Database initialization failed: $e');
+    debugPrint('$stackTrace');
   }
 
+  // Inicializar notificações
   try {
     await NotificationService.instance.initialize();
   } catch (e) {
     debugPrint('Notification initialization skipped: $e');
   }
 
-  // Inicializar SessionService
+  // Inicializar sessão
   try {
     await SessionService().initialize();
   } catch (e) {

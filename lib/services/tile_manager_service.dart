@@ -1,7 +1,11 @@
+import 'dart:math' as math;
+
+import 'package:flutter/foundation.dart';
+
 import '../models/database_models.dart';
+import '../models/graph_geometry.dart';
 import '../models/route_models.dart';
 import 'database_service.dart';
-import 'dart:math' as math;
 
 class TileManagerService {
   static final TileManagerService _instance = TileManagerService._internal();
@@ -22,6 +26,9 @@ class TileManagerService {
 
   /// Verifica se um quadro geográfico foi baixado localmente
   Future<bool> quadroFoiBaixado(double latitude, double longitude) async {
+    if (kIsWeb) {
+      return false;
+    }
     final id = gerarIdQuadro(latitude, longitude);
     final quadro = await _dbService.obterQuadro(id);
     return quadro != null && quadro.completo;
@@ -30,6 +37,16 @@ class TileManagerService {
   /// Carrega ou cria um quadro geográfico
   Future<QuadroGeografico> obterOuCriarQuadro(
       double latitude, double longitude) async {
+    if (kIsWeb) {
+      return QuadroGeografico(
+        id: gerarIdQuadro(latitude, longitude),
+        latitudeCentro: latitude,
+        longitudeCentro: longitude,
+        raioKm: RAIO_QUADRO_KM,
+        dataDownload: DateTime.now(),
+        completo: true,
+      );
+    }
     final id = gerarIdQuadro(latitude, longitude);
     var quadro = await _dbService.obterQuadro(id);
 
@@ -54,37 +71,24 @@ class TileManagerService {
     print('🔧 CONSTRUINDO GRAFO DO QUADRO');
     print('📍 Centro: Lat: $latitude, Lon: $longitude');
 
+    if (kIsWeb) {
+      throw Exception('Grafo offline requer SQLite.');
+    }
+
     final quadro = await obterOuCriarQuadro(latitude, longitude);
     print('📦 Quadro ID: ${quadro.id}, Raio: ${quadro.raioKm}km, Completo: ${quadro.completo}');
 
     // Check if database is actually available
     final db = await _dbService.database;
-    
-    List<RuaBD> ruas;
-    List<NoInterseccaoDB> nos;
-
     if (db == null || !DatabaseService.isAvailable) {
-      print('⚠️ Banco de dados não disponível, gerando dados em memória...');
-      // Generate example data directly
-      ruas = _gerarRuasExemplo(
-        quadro.latitudeCentro,
-        quadro.longitudeCentro,
-        quadro.raioKm,
-        quadro.id,
-      );
-      nos = _gerarNosAPartirDasRuas(ruas, quadro.id);
-    } else {
-      // Load from database
-      ruas = await _dbService.obterRuasDoQuadro(quadro.id);
-      nos = await _dbService.obterNosDoQuadro(quadro.id);
+      throw Exception('Banco de dados não disponível');
+    }
 
-      // If empty, generate and save
-      if (ruas.isEmpty || nos.isEmpty) {
-        print('📥 Quadro vazio, preenchendo com dados de exemplo...');
-        await _preencherQuadroComDadosExemplo(quadro);
-        ruas = await _dbService.obterRuasDoQuadro(quadro.id);
-        nos = await _dbService.obterNosDoQuadro(quadro.id);
-      }
+    final ruas = await _dbService.obterRuasDoQuadro(quadro.id);
+    final nos = await _dbService.obterNosDoQuadro(quadro.id);
+
+    if (ruas.isEmpty || nos.isEmpty) {
+      throw Exception('Quadro sem dados. Baixe a região antes de usar.');
     }
 
     print('📊 Carregado: ${ruas.length} ruas, ${nos.length} nós');
@@ -123,17 +127,18 @@ class TileManagerService {
           temSemaforo: rua.temSemafo,
         );
 
-        final ruaVolta = Rua(
-          origem: noFim.id,
-          destino: noInicio.id,
-          distancia: rua.distanciaMetros,
-          tipoVia: rua.tipo,
-          temSemaforo: rua.temSemafo,
-        );
-
-        // Bidirecional
         grafo[noInicio.id]?.conexoes[noFim.id] = ruaIda;
-        grafo[noFim.id]?.conexoes[noInicio.id] = ruaVolta;
+
+        if (!rua.oneWay) {
+          final ruaVolta = Rua(
+            origem: noFim.id,
+            destino: noInicio.id,
+            distancia: rua.distanciaMetros,
+            tipoVia: rua.tipo,
+            temSemaforo: rua.temSemafo,
+          );
+          grafo[noFim.id]?.conexoes[noInicio.id] = ruaVolta;
+        }
       }
     }
 
@@ -196,160 +201,126 @@ class TileManagerService {
     return graus * (math.pi / 180.0);
   }
 
-  /// Preenche quadro com dados de exemplo (simulando download de OSM)
-  Future<void> _preencherQuadroComDadosExemplo(
-      QuadroGeografico quadro) async {
-    print('📥 Preenchendo quadro ${quadro.id} com dados de exemplo...');
+  /// Importa geometria real das ruas e persiste no SQLite
+  Future<void> importarGeometriaQuadro(
+    double latitude,
+    double longitude,
+    List<RoadGeometry> roads,
+  ) async {
+    if (kIsWeb) {
+      throw Exception('SQLite não está disponível na web.');
+    }
 
-    final ruasExemplo = _gerarRuasExemplo(
-      quadro.latitudeCentro,
-      quadro.longitudeCentro,
-      quadro.raioKm,
-      quadro.id,
-    );
+    final quadro = await obterOuCriarQuadro(latitude, longitude);
+    final ruas = <RuaBD>[];
+    final nos = <String, NoInterseccaoDB>{};
 
-    final nosExemplo =
-        _gerarNosAPartirDasRuas(ruasExemplo, quadro.id);
+    for (final road in roads) {
+      if (road.coordinates.length < 2) {
+        continue;
+      }
 
-    // Salvar no BD
-    await _dbService.salvarMuitasRuas(ruasExemplo);
-    await _dbService.salvarMuitosNos(nosExemplo);
+      for (var i = 0; i < road.coordinates.length - 1; i++) {
+        final a = road.coordinates[i];
+        final b = road.coordinates[i + 1];
+        final distancia = _calcularDistanciaHaversine(
+              a.latitude,
+              a.longitude,
+              b.latitude,
+              b.longitude,
+            ) *
+            1000;
 
-    // Marcar como completo
+        final ruaId = '${road.id}_$i';
+        ruas.add(RuaBD(
+          id: ruaId,
+          nome: road.name,
+          lat1: a.latitude,
+          lon1: a.longitude,
+          lat2: b.latitude,
+          lon2: b.longitude,
+          distanciaMetros: distancia,
+          tipo: road.surfaceType,
+          temSemafo: road.hasTrafficLight,
+          velocidadekmh: road.speedLimitKmh,
+          oneWay: road.oneWay,
+          tileId: quadro.id,
+        ));
+
+        _registrarNo(nos, a, ruaId, quadro.id);
+        _registrarNo(nos, b, ruaId, quadro.id);
+      }
+    }
+
+    if (ruas.isEmpty || nos.isEmpty) {
+      throw Exception('Geometria vazia para o quadro.');
+    }
+
+    await _dbService.salvarMuitasRuas(ruas);
+    await _dbService.salvarMuitosNos(nos.values.toList());
+
     final quadroAtualizado = QuadroGeografico(
       id: quadro.id,
       latitudeCentro: quadro.latitudeCentro,
       longitudeCentro: quadro.longitudeCentro,
       raioKm: quadro.raioKm,
-      dataDownload: quadro.dataDownload,
+      dataDownload: DateTime.now(),
       completo: true,
     );
     await _dbService.salvarQuadro(quadroAtualizado);
-
-    print('✅ Quadro preenchido com ${ruasExemplo.length} ruas e ${nosExemplo.length} nós');
   }
 
-  /// Gera ruas de exemplo em uma grade realista
-  List<RuaBD> _gerarRuasExemplo(
-    double latBase,
-    double lonBase,
-    double raioKm,
-    String tileId,
-  ) {
-    final ruas = <RuaBD>[];
-    const quadraSize = 0.002; // ~200 metros em graus
-    const tiposRua = ['asfalto', 'terra', 'paralelepípedo'];
-    final random = math.Random();
-
-    int ruaCount = 0;
-
-    // Gerar grid de ruas
-    for (double lat = latBase - (raioKm / 111);
-        lat < latBase + (raioKm / 111);
-        lat += quadraSize) {
-      for (double lon = lonBase - (raioKm / 111);
-          lon < lonBase + (raioKm / 111);
-          lon += quadraSize) {
-        // Rua horizontal
-        if (lon + quadraSize < lonBase + (raioKm / 111)) {
-          final tipo = tiposRua[random.nextInt(tiposRua.length)];
-          final distancia = _calcularDistanciaHaversine(
-            lat,
-            lon,
-            lat,
-            lon + quadraSize,
-          );
-
-          ruas.add(RuaBD(
-            id: 'rua_h_${ruaCount++}',
-            nome: 'Rua ${lat.toStringAsFixed(3)}_H',
-            lat1: lat,
-            lon1: lon,
-            lat2: lat,
-            lon2: lon + quadraSize,
-            distanciaMetros: distancia * 1000,
-            tipo: tipo,
-            temSemafo: random.nextBool(),
-            velocidadekmh: tipo == 'asfalto' ? 50 : 30,
-            tileId: tileId,
-          ));
-        }
-
-        // Rua vertical
-        if (lat + quadraSize < latBase + (raioKm / 111)) {
-          final tipo = tiposRua[random.nextInt(tiposRua.length)];
-          final distancia = _calcularDistanciaHaversine(
-            lat,
-            lon,
-            lat + quadraSize,
-            lon,
-          );
-
-          ruas.add(RuaBD(
-            id: 'rua_v_${ruaCount++}',
-            nome: 'Rua ${lon.toStringAsFixed(3)}_V',
-            lat1: lat,
-            lon1: lon,
-            lat2: lat + quadraSize,
-            lon2: lon,
-            distanciaMetros: distancia * 1000,
-            tipo: tipo,
-            temSemafo: random.nextBool(),
-            velocidadekmh: tipo == 'asfalto' ? 50 : 30,
-            tileId: tileId,
-          ));
-        }
-      }
-    }
-
-    return ruas;
+  String _nodeKey(double latitude, double longitude) {
+    return '${latitude.toStringAsFixed(6)}_${longitude.toStringAsFixed(6)}';
   }
 
-  /// Gera nós de intersecção a partir das ruas
-  List<NoInterseccaoDB> _gerarNosAPartirDasRuas(
-    List<RuaBD> ruas,
+  void _registrarNo(
+    Map<String, NoInterseccaoDB> nos,
+    GeoPoint ponto,
+    String ruaId,
     String tileId,
   ) {
-    final nos = <String, NoInterseccaoDB>{};
+    final key = _nodeKey(ponto.latitude, ponto.longitude);
+    final existente = nos[key];
 
-    // Criar nó para cada ponto de início/fim de rua
-    for (var rua in ruas) {
-      void criarOuAtualizarNo(double lat, double lon, String ruaId) {
-        final noId = '${lat.toStringAsFixed(5)}_${lon.toStringAsFixed(5)}';
-
-        if (nos.containsKey(noId)) {
-          nos[noId]!.ruasConectadas.add(ruaId);
-        } else {
-          nos[noId] = NoInterseccaoDB(
-            id: noId,
-            latitude: lat,
-            longitude: lon,
-            ruasConectadas: [ruaId],
-            tileId: tileId,
-          );
-        }
-      }
-
-      criarOuAtualizarNo(rua.lat1, rua.lon1, rua.id);
-      criarOuAtualizarNo(rua.lat2, rua.lon2, rua.id);
+    if (existente == null) {
+      nos[key] = NoInterseccaoDB(
+        id: key,
+        latitude: ponto.latitude,
+        longitude: ponto.longitude,
+        ruasConectadas: [ruaId],
+        tileId: tileId,
+      );
+      return;
     }
 
-    return nos.values.toList();
+    if (!existente.ruasConectadas.contains(ruaId)) {
+      existente.ruasConectadas.add(ruaId);
+    }
   }
 
   /// Obtém todos os quadros baixados
   Future<List<QuadroGeografico>> obterTodosQuadrosBaixados() async {
+    if (kIsWeb) {
+      return [];
+    }
     return await _dbService.obterTodosQuadros();
   }
 
   /// Deleta um quadro e seus dados
   Future<void> deletarQuadro(String id) async {
+    if (kIsWeb) {
+      return;
+    }
     await _dbService.deletarQuadro(id);
     print('🗑️ Quadro $id deletado');
   }
 
   /// Obtém tamanho do banco de dados em KB
   Future<int> obterTamanhoBD() async {
+    if (kIsWeb) {
+      return 0;
+    }
     return await _dbService.obterTamanhoDBemKB();
   }
 }
