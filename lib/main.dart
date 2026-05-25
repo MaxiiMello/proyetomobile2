@@ -16,6 +16,7 @@ import 'services/notification_service.dart';
 import 'services/session_service.dart';
 import 'viewmodels/login_viewmodel.dart';
 import 'viewmodels/map_viewmodel.dart';
+import 'views/wearable/wearable_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -87,6 +88,9 @@ class MainApp extends StatelessWidget {
         fontFamily: 'Roboto',
       ),
       home: const MainNavigation(),
+      routes: {
+        '/wearable': (context) => const WearableScreen(),
+      },
     );
   }
 }
@@ -213,4 +217,6 @@ class _MainNavigationState extends State<MainNavigation> {
         return const MapScreen();
     }
   }
+
+ 
 }

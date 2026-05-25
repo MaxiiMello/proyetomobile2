@@ -34,7 +34,7 @@ class _MapScreenState extends State<MapScreen> {
     if (_mapController != null) {
       _mapsService.setMapController(_mapController!);
     }
-    
+
     // Listener para buscar sugestões de origem
     _startController.addListener(() {
       final viewModel = context.read<MapViewModel>();
@@ -78,10 +78,7 @@ class _MapScreenState extends State<MapScreen> {
 
   void _animateToPoint(double latitude, double longitude) {
     if (_mapController != null) {
-      _mapController!.move(
-        LatLng(latitude, longitude),
-        15.0,
-      );
+      _mapController!.move(LatLng(latitude, longitude), 15.0);
     }
   }
 
@@ -95,11 +92,10 @@ class _MapScreenState extends State<MapScreen> {
         LatLng(viewModel.startLatitude!, viewModel.startLongitude!),
         LatLng(viewModel.endLatitude!, viewModel.endLongitude!),
       );
-      
-      _mapController!.fitCamera(CameraFit.bounds(
-        bounds: bounds,
-        padding: const EdgeInsets.all(100),
-      ));
+
+      _mapController!.fitCamera(
+        CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(100)),
+      );
     }
   }
 
@@ -520,28 +516,29 @@ class _MapScreenState extends State<MapScreen> {
                                     // Animar para o ponto de origem após selecionar
                                     WidgetsBinding.instance
                                         .addPostFrameCallback((_) {
-                                      if (viewModel.startLatitude != null &&
-                                          viewModel.startLongitude != null) {
-                                        _animateToPoint(
-                                          viewModel.startLatitude!,
-                                          viewModel.startLongitude!,
-                                        );
-                                      }
-                                    });
+                                          if (viewModel.startLatitude != null &&
+                                              viewModel.startLongitude !=
+                                                  null) {
+                                            _animateToPoint(
+                                              viewModel.startLatitude!,
+                                              viewModel.startLongitude!,
+                                            );
+                                          }
+                                        });
                                   } else {
                                     viewModel.selectEndPoint(suggestion);
                                     _endController.text = suggestion;
                                     // Animar para o ponto de destino após selecionar
                                     WidgetsBinding.instance
                                         .addPostFrameCallback((_) {
-                                      if (viewModel.endLatitude != null &&
-                                          viewModel.endLongitude != null) {
-                                        _animateToPoint(
-                                          viewModel.endLatitude!,
-                                          viewModel.endLongitude!,
-                                        );
-                                      }
-                                    });
+                                          if (viewModel.endLatitude != null &&
+                                              viewModel.endLongitude != null) {
+                                            _animateToPoint(
+                                              viewModel.endLatitude!,
+                                              viewModel.endLongitude!,
+                                            );
+                                          }
+                                        });
                                   }
                                   FocusScope.of(context).unfocus();
                                 },
@@ -577,7 +574,8 @@ class _MapScreenState extends State<MapScreen> {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
@@ -611,9 +609,7 @@ class _MapScreenState extends State<MapScreen> {
                             padding: const EdgeInsets.all(12.0),
                             decoration: BoxDecoration(
                               color: Colors.red[50],
-                              border: Border.all(
-                                color: Colors.red[300]!,
-                              ),
+                              border: Border.all(color: Colors.red[300]!),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -649,8 +645,9 @@ class _MapScreenState extends State<MapScreen> {
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF1B7E3D),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -680,9 +677,7 @@ class _MapScreenState extends State<MapScreen> {
                             padding: const EdgeInsets.all(12.0),
                             decoration: BoxDecoration(
                               color: Colors.blue[50],
-                              border: Border.all(
-                                color: Colors.blue[300]!,
-                              ),
+                              border: Border.all(color: Colors.blue[300]!),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -718,8 +713,9 @@ class _MapScreenState extends State<MapScreen> {
                                 backgroundColor: viewModel.isNavigating
                                     ? Colors.red[600]
                                     : Colors.green[700],
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -759,9 +755,7 @@ class _MapScreenState extends State<MapScreen> {
                             padding: const EdgeInsets.all(12.0),
                             decoration: BoxDecoration(
                               color: Colors.green[50],
-                              border: Border.all(
-                                color: Colors.green[200]!,
-                              ),
+                              border: Border.all(color: Colors.green[200]!),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -811,10 +805,7 @@ class _MapScreenState extends State<MapScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 16.0),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  border: Border.all(
-                    color: Colors.grey[300]!,
-                    width: 1,
-                  ),
+                  border: Border.all(color: Colors.grey[300]!, width: 1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: ClipRRect(
@@ -837,9 +828,10 @@ class _MapScreenState extends State<MapScreen> {
                               initialZoom: viewModel.zoomLevel > 0
                                   ? viewModel.zoomLevel
                                   : 14.0,
-                              onPositionChanged: (MapCamera position, bool hasGesture) {
-                                viewModel.zoomLevel = position.zoom;
-                              },
+                              onPositionChanged:
+                                  (MapCamera position, bool hasGesture) {
+                                    viewModel.zoomLevel = position.zoom;
+                                  },
                               onTap: (tapPosition, point) async {
                                 if (_downloadSelectionActive) {
                                   setState(() {
@@ -885,7 +877,8 @@ class _MapScreenState extends State<MapScreen> {
                                     width: 36,
                                     height: 36,
                                     child: Transform.rotate(
-                                      angle: ((viewModel.currentHeading ?? 0) *
+                                      angle:
+                                          ((viewModel.currentHeading ?? 0) *
                                               math.pi) /
                                           180,
                                       child: const Icon(
@@ -927,12 +920,14 @@ class _MapScreenState extends State<MapScreen> {
                                 ),
                               // Traçado da rota calculada
                               if (viewModel.rotaCalculada != null &&
-                                  viewModel.rotaCalculada!.caminhoFinal
+                                  viewModel
+                                      .rotaCalculada!
+                                      .caminhoFinal
                                       .isNotEmpty)
                                 PolylineLayer(
                                   polylines: [
                                     Polyline(
-                                        points: viewModel.buildRoutePoints(),
+                                      points: viewModel.buildRoutePoints(),
                                       color: Colors.green[700]!,
                                       strokeWidth: 4.0,
                                       borderStrokeWidth: 1.0,
@@ -1016,8 +1011,9 @@ class _MapScreenState extends State<MapScreen> {
                                               shape: BoxShape.circle,
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.red
-                                                      .withValues(alpha: 0.4),
+                                                  color: Colors.red.withValues(
+                                                    alpha: 0.4,
+                                                  ),
                                                   blurRadius: 12,
                                                   spreadRadius: 2,
                                                 ),
@@ -1058,13 +1054,28 @@ class _MapScreenState extends State<MapScreen> {
                                   heroTag: 'download_tile',
                                   backgroundColor: Colors.blue[600],
                                   mini: true,
-                                  onPressed: () => _openDownloadSheet(viewModel),
+                                  onPressed: () =>
+                                      _openDownloadSheet(viewModel),
                                   child: const Icon(
                                     Icons.download,
                                     color: Colors.white,
                                     size: 18,
                                   ),
                                 ),
+                                FloatingActionButton(
+                                  heroTag: 'wearable_btn',
+                                  backgroundColor: Colors.black,
+                                  mini: true,
+                                  onPressed: () {
+                                    Navigator.pushNamed(context, '/wearable');
+                                  },
+                                  child: const Icon(
+                                    Icons.watch,
+                                    color: Colors.white,
+                                    size: 18,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
                                 const SizedBox(height: 12),
                                 FloatingActionButton(
                                   heroTag: 'center',
@@ -1128,8 +1139,7 @@ class _MapScreenState extends State<MapScreen> {
                               left: 16,
                               right: 16,
                               child: Container(
-                                padding:
-                                    const EdgeInsets.symmetric(
+                                padding: const EdgeInsets.symmetric(
                                   horizontal: 16,
                                   vertical: 12,
                                 ),
@@ -1140,7 +1150,9 @@ class _MapScreenState extends State<MapScreen> {
                                   borderRadius: BorderRadius.circular(8),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.3),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.3,
+                                      ),
                                       blurRadius: 8,
                                     ),
                                   ],
@@ -1184,7 +1196,9 @@ class _MapScreenState extends State<MapScreen> {
                                   borderRadius: BorderRadius.circular(8),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.3),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.3,
+                                      ),
                                       blurRadius: 8,
                                     ),
                                   ],
@@ -1223,7 +1237,7 @@ class _MapScreenState extends State<MapScreen> {
 
   void _showCalculatingRoute(BuildContext context) {
     final viewModel = context.read<MapViewModel>();
-    
+
     // Mostrar loading
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1242,19 +1256,13 @@ class _MapScreenState extends State<MapScreen> {
             const SizedBox(height: 8),
             Text(
               'Origem: ${viewModel.startAddress ?? "Não definido"}',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
             Text(
               'Destino: ${viewModel.endAddress ?? "Não definido"}',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -1264,7 +1272,7 @@ class _MapScreenState extends State<MapScreen> {
         backgroundColor: Colors.green[700],
       ),
     );
-    
+
     // Calcular rota
     viewModel.calcularMelhorRota().then((_) {
       if (viewModel.dadosRotaUI != null) {
@@ -1286,24 +1294,15 @@ class _MapScreenState extends State<MapScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'Tempo: ${viewModel.dadosRotaUI!.tempoFormatado}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
                 ),
                 Text(
                   'Distância: ${viewModel.dadosRotaUI!.distancia}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
                 ),
                 Text(
                   'Semáforos: ${viewModel.dadosRotaUI!.semaforosNosCaminho}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
                 ),
               ],
             ),
@@ -1311,7 +1310,7 @@ class _MapScreenState extends State<MapScreen> {
             backgroundColor: Colors.green[700],
           ),
         );
-        
+
         // Redesenhar mapa para mostrar a rota
         setState(() {});
       } else if (viewModel.errorMessage != null) {
@@ -1329,5 +1328,4 @@ class _MapScreenState extends State<MapScreen> {
       }
     });
   }
-
 }
