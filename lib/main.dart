@@ -104,7 +104,7 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   bool isLoggedIn = false;
-  int currentIndex = 2;
+  int currentIndex = 1;
   bool isCheckingSession = true;
   late LoginViewModel _loginViewModel;
 
@@ -122,6 +122,9 @@ class _MainNavigationState extends State<MainNavigation> {
       if (mounted) {
         setState(() {
           isLoggedIn = sessionRestored;
+          if (sessionRestored) {
+            currentIndex = 1;
+          }
           isCheckingSession = false;
         });
       }
@@ -169,6 +172,7 @@ class _MainNavigationState extends State<MainNavigation> {
           onLoginSuccess: () {
             setState(() {
               isLoggedIn = true;
+              currentIndex = 1;
             });
           },
         ),

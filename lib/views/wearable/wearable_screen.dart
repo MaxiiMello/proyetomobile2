@@ -6,7 +6,7 @@ class WearableScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[900],
+      backgroundColor: Colors.black,
       body: Center(
         child: ClipOval(
           child: Container(
