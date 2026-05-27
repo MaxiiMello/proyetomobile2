@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../viewmodels/map_viewmodel.dart';
 
 class WearableScreen extends StatelessWidget {
   const WearableScreen({super.key});
@@ -40,8 +43,25 @@ class WearableScreen extends StatelessWidget {
                       shape: const CircleBorder(),
                       padding: const EdgeInsets.all(24),
                     ),
-                    onPressed: () {
-                      Navigator.pop(context);
+                    onPressed: () async {
+                      final viewModel = context.read<MapViewModel>();
+                      await viewModel.startNavigation();
+
+                      if (!context.mounted) return;
+
+                      if (viewModel.isNavigating) {
+                        Navigator.pop(context);
+                        return;
+                      }
+
+                      final message = viewModel.errorMessage ??
+                          'Defina uma rota antes de iniciar.';
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(message),
+                          backgroundColor: Colors.red[700],
+                        ),
+                      );
                     },
                     child: const Icon(
                       Icons.play_arrow,
