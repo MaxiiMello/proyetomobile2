@@ -79,18 +79,21 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'SinalVerde',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        primaryColor: const Color(0xFF1B7E3D),
-        fontFamily: 'Roboto',
+    return ChangeNotifierProvider(
+      create: (_) => MapViewModel(),
+      child: MaterialApp(
+        title: 'SinalVerde',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          useMaterial3: true,
+          primaryColor: const Color(0xFF1B7E3D),
+          fontFamily: 'Roboto',
+        ),
+        home: const MainNavigation(),
+        routes: {
+          '/wearable': (context) => const WearableScreen(),
+        },
       ),
-      home: const MainNavigation(),
-      routes: {
-        '/wearable': (context) => const WearableScreen(),
-      },
     );
   }
 }
@@ -180,18 +183,15 @@ class _MainNavigationState extends State<MainNavigation> {
     }
 
     try {
-      return ChangeNotifierProvider(
-        create: (_) => MapViewModel(),
-        child: Scaffold(
-          body: _buildBody(),
-          bottomNavigationBar: BottomNavBar(
-            currentIndex: currentIndex,
-            onTap: (index) {
-              setState(() {
-                currentIndex = index;
-              });
-            },
-          ),
+      return Scaffold(
+        body: _buildBody(),
+        bottomNavigationBar: BottomNavBar(
+          currentIndex: currentIndex,
+          onTap: (index) {
+            setState(() {
+              currentIndex = index;
+            });
+          },
         ),
       );
     } catch (e, stackTrace) {

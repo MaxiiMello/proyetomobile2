@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-
+import 'package:provider/provider.dart';
 import '../../../services/notification_service.dart';
+import '../../../viewmodels/settings_viewmodel.dart';
+import '../../widgets/terms_dialog.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -10,10 +12,10 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool notificationsEnabled = true;
-
   @override
   Widget build(BuildContext context) {
+    final viewModel = context.watch<SettingsViewModel>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -35,25 +37,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSettingsTile(
                 icon: Icons.language,
                 title: 'Idioma',
-                subtitle: 'Português (BR)',
+                subtitle: viewModel.selectedLanguage,
               ),
               _buildSettingsTile(
                 icon: Icons.location_on,
                 title: 'Localização',
-                subtitle: 'Sempre ativo',
+                subtitle: viewModel.locationSetting,
               ),
               _buildSettingsTile(
                 icon: Icons.volume_up,
                 title: 'Notificações de Som',
-                subtitle: notificationsEnabled ? 'Ativado' : 'Desativado',
+                subtitle: viewModel.notificationsEnabled ? 'Ativado' : 'Desativado',
                 trailing: Switch(
-                  value: notificationsEnabled,
+                  value: viewModel.notificationsEnabled,
                   activeThumbColor: const Color(0xFF1B7E3D),
                   activeTrackColor: const Color(0xFF1B7E3D).withValues(alpha: 0.5),
                   onChanged: (value) {
-                    setState(() {
-                      notificationsEnabled = value;
-                    });
+                    context.read<SettingsViewModel>().toggleNotifications(value);
                   },
                 ),
               ),
@@ -73,15 +73,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSettingsTile(
                 icon: Icons.storage,
                 title: 'Gerenciar Downloads',
-                subtitle: '2.5 GB de mapas instalados',
+                subtitle: '${viewModel.mapStorageSize} de mapas instalados',
+                onTap: () => context.read<SettingsViewModel>().manageDownloads(),
               ),
               _buildSettingsTile(
                 icon: Icons.privacy_tip,
                 title: 'Política de Privacidade',
+                onTap: () => showTermsDialog(context),
               ),
               _buildSettingsTile(
                 icon: Icons.description,
                 title: 'Termos de Serviço',
+                onTap: () => showTermsDialog(context),
               ),
             ],
           ),
@@ -91,7 +94,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSettingsTile(
                 icon: Icons.info,
                 title: 'Versão do App',
-                subtitle: 'v1.0.0',
+                subtitle: viewModel.appVersion,
+                onTap: () => context.read<SettingsViewModel>().showAboutApp(),
               ),
             ],
           ),

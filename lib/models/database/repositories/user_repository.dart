@@ -18,7 +18,7 @@ class User {
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? lastLogin;
-  final String? passwordHash; // Para uso interno de autenticación
+  final String? passwordHash; 
 
   User({
     required this.id,
@@ -76,10 +76,8 @@ class UserRepository {
   
   Future<Database> get _db async => AppDatabase.instance.database;
 
-  /// Verificar si está en web
   bool get _isWeb => kIsWeb;
 
-  // Hash de contraseña con salt
   static String _hashPassword(String password, {String? salt}) {
     salt ??= DateTime.now().millisecondsSinceEpoch.toString();
     final bytes = utf8.encode('$password$salt');
@@ -101,7 +99,6 @@ class UserRepository {
     }
   }
 
-  // Registrar nuevo usuario
   Future<User> register({
     required String email,
     required String password,
@@ -110,27 +107,20 @@ class UserRepository {
     String? preferredCityCode,
   }) async {
     try {
-      print('📝 Iniciando registro para: $email (Platform: ${_isWeb ? "Web" : "Mobile/Desktop"})');
       
       if (_isWeb) {
-        // En web, usar WebUserStorage
-        print('🌐 Usando WebUserStorage para registro');
         await _webStorage.initialize();
         
-        // Verificar si el email ya existe
-        print('🔍 Verificando si el email existe...');
         final existing = await _webStorage.getUserByEmail(email);
         
         if (existing != null) {
           throw Exception('Email ya está registrado');
         }
 
-        print('✅ Email disponible');
         final passwordHash = _hashPassword(password);
 
-        print('💾 Insertando usuario en almacenamiento web...');
         final userId = await _webStorage.saveUser(User(
-          id: 0, // ID temporal, será actualizado
+          id: 0,
           email: email.toLowerCase(),
           passwordHash: passwordHash,
           name: name,
@@ -141,20 +131,13 @@ class UserRepository {
           updatedAt: DateTime.now(),
         ));
 
-        print('✅ Usuario insertado con ID: $userId');
         final user = await _webStorage.getUserById(userId);
-        print('✅ Registro exitoso para: $email');
         return user!;
       } else {
-        // En mobile/desktop, usar SQLite
-        print('📱 Usando SQLite para registro');
         final db = await _db;
-        print('✅ Banco de datos conectado');
         
         final now = DateTime.now().toUtc();
 
-        // Verificar si el email ya existe
-        print('🔍 Verificando si el email existe...');
         final existing = await db.query(
           DbConstants.tableUsers,
           where: 'email = ?',
@@ -165,10 +148,8 @@ class UserRepository {
           throw Exception('Email ya está registrado');
         }
 
-        print('✅ Email disponible');
         final passwordHash = _hashPassword(password);
 
-        print('💾 Insertando usuario en la base de datos...');
         final userId = await db.insert(
           DbConstants.tableUsers,
           {
@@ -183,55 +164,37 @@ class UserRepository {
           },
         );
 
-        print('✅ Usuario insertado con ID: $userId');
         final user = await getUserById(userId);
-        print('✅ Registro exitoso para: $email');
         return user!;
       }
     } catch (e) {
-      print('❌ Error en registro: $e');
       throw Exception('Error al registrar: $e');
     }
   }
 
-  // Login
   Future<User> login({
     required String email,
     required String password,
   }) async {
     try {
-      print('🔐 Iniciando login para: $email (Platform: ${_isWeb ? "Web" : "Mobile/Desktop"})');
-      
       if (_isWeb) {
-        // En web, usar WebUserStorage
-        print('🌐 Usando WebUserStorage para login');
         await _webStorage.initialize();
         
         final user = await _webStorage.getUserByEmail(email);
         if (user == null) {
           throw Exception('Usuário não encontrado. Faça o registro primeiro!');
         }
-
-        print('✅ Usuario encontrado: ${user.email}');
-        print('🔐 passwordHash from DB: ${user.passwordHash}');
         
         final storedHash = user.passwordHash;
-        print('🔐 storedHash variable: $storedHash');
         
         if (storedHash == null) {
-          print('❌ ERROR: storedHash é null! O passwordHash não foi salvo corretamente');
           throw Exception('Senha não está configurada para este usuário');
         }
         
         if (!_verifyPassword(password, storedHash)) {
-          print('❌ Verificação de senha falhou');
-          print('   Password fornecida: $password');
-          print('   Hash armazenado: $storedHash');
           throw Exception('Senha incorreta');
         }
 
-        print('✅ Senha verificada corretamente!');
-        // Actualizar último login
         final updatedUser = User(
           id: user.id,
           email: user.email,
@@ -243,24 +206,19 @@ class UserRepository {
           createdAt: user.createdAt,
           updatedAt: DateTime.now(),
           lastLogin: DateTime.now(),
-          passwordHash: storedHash, // Mantener el hash
+          passwordHash: storedHash,
         );
         
         await _webStorage.updateUser(updatedUser);
-        print('✅ Login bem-sucedido para: $email (Web)');
         return updatedUser;
       } else {
-        // En mobile/desktop, usar SQLite
-        print('📱 Usando SQLite para login');
         final db = await _db;
-        print('✅ Banco de datos conectado');
         
         final result = await db.query(
           DbConstants.tableUsers,
           where: 'email = ?',
           whereArgs: [email.toLowerCase()],
         );
-        print('📊 Resultado da query: ${result.length} registros encontrados');
 
         if (result.isEmpty) {
           throw Exception('Usuário não encontrado. Faça o registro primeiro!');
@@ -273,7 +231,6 @@ class UserRepository {
           throw Exception('Senha incorreta');
         }
 
-        // Actualizar último login
         final now = DateTime.now().toUtc().toIso8601String();
         await db.update(
           DbConstants.tableUsers,
@@ -282,34 +239,20 @@ class UserRepository {
           whereArgs: [record['id']],
         );
 
-        print('✅ Login bem-sucedido para: $email');
         return User.fromMap(record);
       }
     } catch (e) {
-      print('❌ Erro no login: $e');
       throw Exception('Erro no login: $e');
     }
   }
 
-  // Obtener usuario por ID
   Future<User?> getUserById(int userId) async {
     try {
-      print('🔍 Buscando usuario con ID: $userId');
-      
       if (_isWeb) {
-        // En web, usar WebUserStorage
-        print('🌐 Usando WebUserStorage para obtener usuario');
         await _webStorage.initialize();
         final user = await _webStorage.getUserById(userId);
-        if (user != null) {
-          print('✅ Usuario encontrado: ID $userId (Web)');
-        } else {
-          print('⚠️ Usuario con ID $userId no encontrado (Web)');
-        }
         return user;
       } else {
-        // En mobile/desktop, usar SQLite
-        print('📱 Usando SQLite para obtener usuario');
         final db = await _db;
         final result = await db.query(
           DbConstants.tableUsers,
@@ -318,19 +261,15 @@ class UserRepository {
         );
 
         if (result.isEmpty) {
-          print('⚠️ Usuario con ID $userId no encontrado');
           return null;
         }
-        print('✅ Usuario encontrado: ID $userId');
         return User.fromMap(result.first);
       }
     } catch (e) {
-      print('❌ Error al obtener usuario: $e');
       throw Exception('Error al obtener usuario: $e');
     }
   }
 
-  // Obtener usuario por email
   Future<User?> getUserByEmail(String email) async {
     try {
       final db = await _db;
@@ -347,7 +286,6 @@ class UserRepository {
     }
   }
 
-  // Actualizar perfil
   Future<User?> updateProfile({
     required int userId,
     String? name,
@@ -379,7 +317,6 @@ class UserRepository {
     }
   }
 
-  // Cambiar contraseña
   Future<void> changePassword({
     required int userId,
     required String oldPassword,
@@ -419,7 +356,6 @@ class UserRepository {
     }
   }
 
-  // Actualizar suscripción
   Future<User?> updateSubscription({
     required int userId,
     required String plan,
@@ -444,6 +380,24 @@ class UserRepository {
       return await getUserById(userId);
     } catch (e) {
       throw Exception('Error al actualizar suscripción: $e');
+    }
+  }
+
+  Future<void> deleteAccount(int userId) async {
+    try {
+      if (_isWeb) {
+        await _webStorage.initialize();
+        await _webStorage.deleteUser(userId);
+      } else {
+        final db = await _db;
+        await db.delete(
+          DbConstants.tableUsers,
+          where: 'id = ?',
+          whereArgs: [userId],
+        );
+      }
+    } catch (e) {
+      throw Exception('Erro ao excluir conta: $e');
     }
   }
 }

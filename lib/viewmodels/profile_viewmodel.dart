@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-
 import '../models/database/repositories/user_repository.dart';
 
 class ProfileViewModel extends ChangeNotifier {
@@ -37,7 +36,6 @@ class ProfileViewModel extends ChangeNotifier {
     }
   }
 
-  /// Actualizar perfil del usuario
   Future<bool> updateProfile({
     required String name,
     String? phone,
@@ -75,14 +73,12 @@ class ProfileViewModel extends ChangeNotifier {
     }
   }
 
-  /// Logout seguro
   Future<void> logout() async {
     isLoadingProfile = true;
     errorMessage = null;
     notifyListeners();
 
     try {
-      // Limpiar datos
       currentUser = null;
       userName = 'Usuario';
       userEmail = '';
@@ -99,7 +95,6 @@ class ProfileViewModel extends ChangeNotifier {
     }
   }
 
-  /// Refrescar datos del perfil
   Future<void> refreshProfile() async {
     if (currentUser == null) {
       errorMessage = 'Usuario no autenticado';
@@ -123,6 +118,24 @@ class ProfileViewModel extends ChangeNotifier {
       errorMessage = e.toString().replaceAll('Exception: ', '');
       isLoadingProfile = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> deleteAccount() async {
+    if (currentUser == null) return false;
+    
+    isLoadingProfile = true;
+    notifyListeners();
+    
+    try {
+      await _userRepository.deleteAccount(currentUser!.id);
+      await logout();
+      return true;
+    } catch (e) {
+      errorMessage = e.toString().replaceAll('Exception: ', '');
+      isLoadingProfile = false;
+      notifyListeners();
+      return false;
     }
   }
 }

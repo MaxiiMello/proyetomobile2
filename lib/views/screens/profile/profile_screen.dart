@@ -21,6 +21,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
     viewModel = ProfileViewModel();
   }
 
+  void _showDeleteConfirmation() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Excluir Conta',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Esta ação é irreversível. Todos os seus dados serão apagados permanentemente do dispositivo e do sistema. Deseja realmente excluir sua conta?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final success = await viewModel.deleteAccount();
+              if (success) {
+                widget.onLogout();
+              } else {
+                if (mounted && viewModel.errorMessage != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(viewModel.errorMessage!),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+              textStyle: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,7 +86,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Profile Header
             Container(
               color: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -48,9 +94,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Container(
                     width: 90,
                     height: 90,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      color: const Color(0xFF1B7E3D),
+                      color: Color(0xFF1B7E3D),
                     ),
                     child: const Icon(
                       Icons.person,
@@ -79,7 +125,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
 
-            // Profile Stats
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
               child: Row(
@@ -94,7 +139,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             Divider(color: Colors.grey[300], thickness: 1),
 
-            // Profile Sections
             _buildProfileSection(
               title: 'Assinatura Ativa',
               children: [
@@ -160,35 +204,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             _buildProfileSection(
               title: 'Histórico de Viagens',
-              children: [
-             
-              ],
+              children: [],
             ),
 
-            // Logout Button
             Padding(
               padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: widget.onLogout,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red[600],
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              child: Column(
+                children: [
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: widget.onLogout,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red[600],
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Sair da Conta',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
                     ),
-                    elevation: 0,
                   ),
-                  child: const Text(
-                    'Sair da Conta',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: _showDeleteConfirmation,
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Excluir Conta',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.red,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
           ],

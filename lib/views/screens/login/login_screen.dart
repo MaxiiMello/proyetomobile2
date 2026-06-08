@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:proyetomobile2/views/screens/privacy_policy_screen.dart';
 import '../../../viewmodels/login_viewmodel.dart';
+import '../../widgets/terms_dialog.dart';
+
 
 class LoginScreen extends StatefulWidget {
   final Function() onLoginSuccess;
@@ -18,10 +21,10 @@ class _LoginScreenState extends State<LoginScreen> {
   late TextEditingController emailController;
   late TextEditingController passwordController;
   late TextEditingController nameController;
-  late TextEditingController phoneController;
 
   bool isLoginMode = true;
   bool showPassword = false;
+  bool acceptedTerms = false;
 
   @override
   void initState() {
@@ -29,7 +32,6 @@ class _LoginScreenState extends State<LoginScreen> {
     emailController = TextEditingController();
     passwordController = TextEditingController();
     nameController = TextEditingController();
-    phoneController = TextEditingController();
   }
 
   @override
@@ -37,7 +39,6 @@ class _LoginScreenState extends State<LoginScreen> {
     emailController.dispose();
     passwordController.dispose();
     nameController.dispose();
-    phoneController.dispose();
     super.dispose();
   }
 
@@ -57,6 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleRegister(LoginViewModel viewModel) {
+    if (!acceptedTerms) return;
     _performRegister(viewModel);
   }
 
@@ -65,20 +67,20 @@ class _LoginScreenState extends State<LoginScreen> {
       emailInput: emailController.text.trim(),
       passwordInput: passwordController.text,
       nameInput: nameController.text.trim(),
-      phone: phoneController.text.trim(),
     );
 
     if (success && mounted) {
-      // Limpiar formulario y volver a login
       emailController.clear();
       passwordController.clear();
       nameController.clear();
-      phoneController.clear();
-      setState(() => isLoginMode = true);
+      setState(() {
+        isLoginMode = true;
+        acceptedTerms = false;
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Registro exitoso. Inicia sesión con tu cuenta.'),
+          content: Text('Cadastro realizado com sucesso. Faça login com sua conta.'),
           backgroundColor: Color(0xFF1B7E3D),
           duration: Duration(seconds: 2),
         ),
@@ -97,7 +99,6 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo
                 Container(
                   width: 90,
                   height: 90,
@@ -115,10 +116,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 40),
-
-                // Título dinámico
                 Text(
-                  isLoginMode ? 'Iniciar Sesión' : 'Crear Cuenta',
+                  isLoginMode ? 'Entrar' : 'Criar Conta',
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w600,
@@ -127,12 +126,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
-
-                // Subtítulo
                 Text(
                   isLoginMode
-                      ? 'Ingresa tus datos para acceder'
-                      : 'Completa el formulario para registrarte',
+                      ? 'Insira seus dados para acessar sua conta'
+                      : 'Preencha o formulário para se cadastrar',
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[700],
@@ -140,13 +137,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
-
-                // Consumer para escuchar cambios del ViewModel
                 Consumer<LoginViewModel>(
                   builder: (context, viewModel, _) {
                     return Column(
                       children: [
-                        // Error Message
                         if (viewModel.errorMessage != null) ...[
                           Container(
                             padding: const EdgeInsets.all(12),
@@ -174,15 +168,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: 20),
                         ],
-
-                        // Nombre (solo en registro)
                         if (!isLoginMode) ...[
                           TextField(
                             controller: nameController,
                             enabled: !viewModel.isLoadingRegister,
                             style: const TextStyle(fontSize: 14),
                             decoration: InputDecoration(
-                              hintText: 'Tu nombre completo',
+                              hintText: 'Seu nome completo',
                               hintStyle: TextStyle(
                                 color: Colors.grey[400],
                                 fontSize: 14,
@@ -213,8 +205,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: 16),
                         ],
-
-                        // Email
                         TextField(
                           controller: emailController,
                           enabled: !viewModel.isLoadingRegister &&
@@ -252,8 +242,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-
-                        // Password
                         TextField(
                           controller: passwordController,
                           enabled: !viewModel.isLoadingRegister &&
@@ -261,7 +249,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           obscureText: !showPassword,
                           style: const TextStyle(fontSize: 14),
                           decoration: InputDecoration(
-                            hintText: 'Contraseña',
+                            hintText: 'Senha',
                             hintStyle: TextStyle(
                               color: Colors.grey[400],
                               fontSize: 14,
@@ -301,65 +289,68 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-
-                        // Teléfono (solo en registro)
                         if (!isLoginMode) ...[
-                          TextField(
-                            controller: phoneController,
-                            enabled: !viewModel.isLoadingRegister,
-                            keyboardType: TextInputType.phone,
-                            style: const TextStyle(fontSize: 14),
-                            decoration: InputDecoration(
-                              hintText: '+1 234 567 8900',
-                              hintStyle: TextStyle(
-                                color: Colors.grey[400],
-                                fontSize: 14,
-                              ),
-                              prefixIcon: const Icon(Icons.phone,
-                                  color: Colors.grey),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: BorderSide(
-                                  color: Colors.grey[300]!,
+                          Row(
+                            children: [
+                              SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: Checkbox(
+                                  value: acceptedTerms,
+                                  onChanged: viewModel.isLoadingRegister
+                                      ? null
+                                      : (value) {
+                                          setState(() {
+                                            acceptedTerms = value ?? false;
+                                          });
+                                        },
+                                  activeColor: const Color(0xFF1B7E3D),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  side: BorderSide(color: Colors.grey[400]!),
                                 ),
                               ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                                borderSide: const BorderSide(
-                                  color: Color(0xFF1B7E3D),
-                                  width: 1.5,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => const PrivacyPolicyScreen()),
+                                          );
+                                        },
+                                  child: const Text(
+                                    'Eu concordo com os Termos de Uso e Política de Privacidade',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      color: Color(0xFF1B7E3D),
+                                      decoration: TextDecoration.underline,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ),
                               ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                            ),
+                            ],
                           ),
-                          const SizedBox(height: 20),
-                        ] else
-                          const SizedBox(height: 4),
-
-                        // Botón principal
+                          const SizedBox(height: 24),
+                        ] else ...[
+                          const SizedBox(height: 8),
+                        ],
                         SizedBox(
                           width: double.infinity,
                           height: 48,
                           child: ElevatedButton(
-                            onPressed: (isLoginMode &&
-                                        viewModel.isLoading) ||
+                            onPressed: (isLoginMode && viewModel.isLoading) ||
                                     (!isLoginMode &&
-                                        viewModel.isLoadingRegister)
+                                        (viewModel.isLoadingRegister || !acceptedTerms))
                                 ? null
                                 : () => isLoginMode
                                     ? _handleLogin(viewModel)
                                     : _handleRegister(viewModel),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF1B7E3D),
-                              disabledBackgroundColor:
-                                  Colors.grey.shade400,
+                              disabledBackgroundColor: Colors.grey.shade400,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
@@ -371,8 +362,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     width: 24,
                                     child: CircularProgressIndicator(
                                       valueColor:
-                                          AlwaysStoppedAnimation<Color>(
-                                              Colors.white),
+                                          AlwaysStoppedAnimation<Color>(Colors.white),
                                       strokeWidth: 2.5,
                                     ),
                                   )
@@ -382,15 +372,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                         width: 24,
                                         child: CircularProgressIndicator(
                                           valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                  Colors.white),
+                                              AlwaysStoppedAnimation<Color>(Colors.white),
                                           strokeWidth: 2.5,
                                         ),
                                       )
                                     : Text(
-                                        isLoginMode
-                                            ? 'Iniciar Sesión'
-                                            : 'Registrarse',
+                                        isLoginMode ? 'Entrar' : 'Cadastrar Conta',
                                         style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
@@ -400,28 +387,28 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         const SizedBox(height: 20),
-
-                        // Toggle entre login y registro
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
                               isLoginMode
-                                  ? '¿No tienes cuenta? '
-                                  : '¿Ya tienes cuenta? ',
-                              style:
-                                  TextStyle(color: Colors.grey[700], fontSize: 14),
+                                  ? 'Não tem uma conta? '
+                                  : 'Já tem uma conta? ',
+                              style: TextStyle(
+                                  color: Colors.grey[700], fontSize: 14),
                             ),
                             GestureDetector(
                               onTap: !viewModel.isLoading &&
                                       !viewModel.isLoadingRegister
                                   ? () {
-                                      setState(() => isLoginMode = !isLoginMode);
+                                      setState(() {
+                                        isLoginMode = !isLoginMode;
+                                      });
                                       viewModel.errorMessage = null;
                                     }
                                   : null,
                               child: Text(
-                                isLoginMode ? 'Regístrate' : 'Inicia Sesión',
+                                isLoginMode ? 'Cadastre-se' : 'Fazer Login',
                                 style: const TextStyle(
                                   color: Color(0xFF1B7E3D),
                                   fontSize: 14,
@@ -432,8 +419,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                         const SizedBox(height: 24),
-
-                        // Divider
                         if (isLoginMode) ...[
                           Row(
                             children: [
@@ -447,7 +432,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 12),
                                 child: Text(
-                                  'o',
+                                  'ou',
                                   style: TextStyle(
                                     color: Colors.grey[600],
                                     fontSize: 14,
@@ -463,9 +448,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             ],
                           ),
                           const SizedBox(height: 20),
-
-
-                          // Google Button
                           SizedBox(
                             width: double.infinity,
                             height: 48,
@@ -482,8 +464,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   width: 1,
                                 ),
                                 backgroundColor: Colors.white,
-                                disabledBackgroundColor:
-                                    Colors.grey.shade50,
+                                disabledBackgroundColor: Colors.grey.shade50,
                               ),
                               child: const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -495,7 +476,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                   SizedBox(width: 10),
                                   Text(
-                                    'Continuar con Google',
+                                    'Continuar com o Google',
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
