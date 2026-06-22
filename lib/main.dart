@@ -2,73 +2,57 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:proyetomobile2/models/database/database_bootstrap.dart';
+import 'package:proyetomobile2/models/database/web_user_storage.dart';
+import 'package:proyetomobile2/services/notification_service.dart';
+import 'package:proyetomobile2/services/session_service.dart';
+import 'package:proyetomobile2/viewmodels/login_viewmodel.dart';
+import 'package:proyetomobile2/viewmodels/map_viewmodel.dart';
+import 'package:proyetomobile2/views/screens/login/login_screen.dart';
+import 'package:proyetomobile2/views/screens/map/map_screen.dart';
+import 'package:proyetomobile2/views/screens/plans/plans_screen.dart';
+import 'package:proyetomobile2/views/screens/profile/profile_screen.dart';
+import 'package:proyetomobile2/views/screens/settings/settings_screen.dart';
+import 'package:proyetomobile2/views/wearable/wearable_screen.dart';
+import 'package:proyetomobile2/views/widgets/bottom_nav_bar.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-
-import 'models/database/database_bootstrap.dart';
-import 'models/database/web_user_storage.dart';
-import 'views/screens/login/login_screen.dart';
-import 'views/screens/plans/plans_screen.dart';
-import 'views/screens/map/map_screen.dart';
-import 'views/screens/settings/settings_screen.dart';
-import 'views/screens/profile/profile_screen.dart';
-import 'views/widgets/bottom_nav_bar.dart';
-import 'services/notification_service.dart';
-import 'services/session_service.dart';
-import 'viewmodels/login_viewmodel.dart';
-import 'viewmodels/map_viewmodel.dart';
-import 'views/wearable/wearable_screen.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // Aseguramos la inicialización y retenemos la Splash Screen nativa
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // Initialize SQLite based on the specific platform
   if (kIsWeb) {
-    // Flutter Web - não usa sqflite
-    debugPrint('🌐 Executando em WEB - usando WebUserStorage com SharedPreferences');
-    debugPrint('⏭️ Pulando inicialização do sqflite para web');
-
     try {
-      debugPrint('🔧 Inicializando WebUserStorage...');
       await WebUserStorage().initialize();
-      debugPrint('✅ WebUserStorage inicializado corretamente');
     } catch (e) {
-      debugPrint('⚠️ Erro inicializando WebUserStorage: $e');
+      // Errores silenciados en producción
     }
   } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    // Desktop - obrigatório inicializar sqflite_common_ffi
-    debugPrint('🖥️ Executando em DESKTOP - usando sqflite_common_ffi');
-
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
-
-    debugPrint('✅ databaseFactory inicializado com databaseFactoryFfi');
-  } else {
-    // Android/iOS - sqflite funciona automaticamente
-    debugPrint('📱 Executando em MOBILE - usando sqflite');
   }
 
   // Inicializar banco
   try {
-    debugPrint('🔧 Inicializando DatabaseBootstrap...');
     await DatabaseBootstrap.initialize();
-    debugPrint('✅ DatabaseBootstrap inicializado com sucesso');
-  } catch (e, stackTrace) {
-    debugPrint('❌ Database initialization failed: $e');
-    debugPrint('$stackTrace');
+  } catch (e) {
+    // Errores silenciados em produção
   }
 
   // Inicializar notificações
   try {
     await NotificationService.instance.initialize();
   } catch (e) {
-    debugPrint('Notification initialization skipped: $e');
+    // Errores silenciados em produção
   }
 
   // Inicializar sessão
   try {
     await SessionService().initialize();
   } catch (e) {
-    debugPrint('SessionService initialization skipped: $e');
+    // Errores silenciados em produção
   }
 
   runApp(const MainApp());
@@ -83,16 +67,15 @@ class MainApp extends StatelessWidget {
       create: (_) => MapViewModel(),
       child: MaterialApp(
         title: 'SinalVerde',
-        debugShowCheckedModeBanner: false,
+        debugShowCheckedModeBanner:
+            false, // ¡Este se queda para no ver la tira roja!
         theme: ThemeData(
           useMaterial3: true,
           primaryColor: const Color(0xFF1B7E3D),
           fontFamily: 'Roboto',
         ),
         home: const MainNavigation(),
-        routes: {
-          '/wearable': (context) => const WearableScreen(),
-        },
+        routes: {'/wearable': (context) => const WearableScreen()},
       ),
     );
   }
@@ -121,7 +104,7 @@ class _MainNavigationState extends State<MainNavigation> {
   Future<void> _restoreSessionIfExists() async {
     try {
       final sessionRestored = await _loginViewModel.restoreSession();
-      
+
       if (mounted) {
         setState(() {
           isLoggedIn = sessionRestored;
@@ -132,12 +115,14 @@ class _MainNavigationState extends State<MainNavigation> {
         });
       }
     } catch (e) {
-      debugPrint('❌ Erro ao restaurar sessão: $e');
       if (mounted) {
         setState(() {
           isCheckingSession = false;
         });
       }
+    } finally {
+      // Cuando termina de chequear la sesión, sacamos la Splash Screen nativa
+      FlutterNativeSplash.remove();
     }
   }
 
@@ -152,20 +137,9 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
-    // Mostrar loading enquanto verifica sessão
+    // Ya no mostramos el "Carregando..." manual porque la Splash Screen lo cubre
     if (isCheckingSession) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 16),
-              const Text('Carregando...'),
-            ],
-          ),
-        ),
-      );
+      return const Scaffold(backgroundColor: Colors.white);
     }
 
     if (!isLoggedIn) {
@@ -194,14 +168,8 @@ class _MainNavigationState extends State<MainNavigation> {
           },
         ),
       );
-    } catch (e, stackTrace) {
-      debugPrint('Error in MainNavigation.build: $e');
-      debugPrint('Stack trace: $stackTrace');
-      return Scaffold(
-        body: Center(
-          child: Text('Erro na navegação: $e'),
-        ),
-      );
+    } catch (e) {
+      return const Scaffold(body: Center(child: Text('Erro na navegação.')));
     }
   }
 
@@ -214,13 +182,9 @@ class _MainNavigationState extends State<MainNavigation> {
       case 2:
         return const SettingsScreen();
       case 3:
-        return ProfileScreen(
-          onLogout: _handleLogout,
-        );
+        return ProfileScreen(onLogout: _handleLogout);
       default:
         return const MapScreen();
     }
   }
-
- 
 }

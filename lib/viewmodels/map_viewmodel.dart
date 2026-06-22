@@ -88,10 +88,6 @@ class MapViewModel extends ChangeNotifier {
     final latBase = _graphCenterLatitude ?? -30.8936;
     final lonBase = _graphCenterLongitude ?? -55.5205;
 
-    print('═' * 60);
-    print('🔧 INICIALIZANDO GRAFO COM DADOS REAIS');
-    print('═' * 60);
-
     try {
       // Carregar grafo do TileManager (que carrega do BD)
       final grafo = await _tileManager.construirGrafoDoQuadro(latBase, lonBase);
@@ -102,16 +98,12 @@ class MapViewModel extends ChangeNotifier {
       }
 
       grafoInicializado = true;
-      print('✅ Grafo carregado com sucesso: ${_routingService.grafo.length} nós');
       notifyListeners();
     } catch (e) {
-      print('❌ Erro ao carregar grafo: $e');
       grafoInicializado = false;
       errorMessage = 'Erro ao carregar dados da cidade';
       notifyListeners();
     }
-
-    print('═' * 60);
   }
 
   /// Caregar mapa
@@ -124,18 +116,20 @@ class MapViewModel extends ChangeNotifier {
       // Primeiro tenta última localização conhecida (mais rápido) com timeout
       LocationData? location;
       try {
-        location = await _gpsService.getLastKnownLocation()
-            .timeout(const Duration(seconds: 5));
+        location = await _gpsService.getLastKnownLocation().timeout(
+          const Duration(seconds: 5),
+        );
       } catch (e) {
         // Continua mesmo que falhe
         location = null;
       }
-      
+
       // Se não encontrou última localização, obtém atual com timeout
       if (location == null) {
         try {
-          location = await _gpsService.getCurrentLocation()
-              .timeout(const Duration(seconds: 8));
+          location = await _gpsService.getCurrentLocation().timeout(
+            const Duration(seconds: 8),
+          );
         } catch (e) {
           // Se GPS falhar, usa localização padrão (Santana do Livramento, RS)
           currentLatitude = -30.8936;
@@ -145,11 +139,11 @@ class MapViewModel extends ChangeNotifier {
           return;
         }
       }
-      
+
       currentLatitude = location.latitude;
       currentLongitude = location.longitude;
       currentHeading = location.heading;
-    
+
       isLoadingMap = false;
       notifyListeners();
     } catch (e) {
@@ -205,7 +199,7 @@ class MapViewModel extends ChangeNotifier {
     try {
       final suggestions = await _addressService.getPlacePredictions(input);
       addressSuggestions = suggestions;
-      
+
       if (suggestions.isEmpty) {
         errorMessage = 'Nenhum endereço encontrado para "$input"';
       } else {
@@ -214,7 +208,6 @@ class MapViewModel extends ChangeNotifier {
     } catch (e) {
       addressSuggestions = [];
       errorMessage = 'Erro ao buscar endereços: $e';
-      print('Error getting suggestions: $e');
     }
 
     isLoadingSuggestions = false;
@@ -230,7 +223,7 @@ class MapViewModel extends ChangeNotifier {
 
     try {
       final suggestion = await _addressService.geocodeAddress(address);
-      
+
       if (suggestion != null) {
         currentLatitude = suggestion.latitude;
         currentLongitude = suggestion.longitude;
@@ -241,7 +234,6 @@ class MapViewModel extends ChangeNotifier {
       }
     } catch (e) {
       errorMessage = 'Erro ao buscar endereço: $e';
-      print('Error selecting address: $e');
     }
 
     isLoadingMap = false;
@@ -281,7 +273,6 @@ class MapViewModel extends ChangeNotifier {
       }
     } catch (e) {
       errorMessage = 'Erro ao buscar endereço: $e';
-      print('Error selecting start point: $e');
     }
 
     isLoadingMap = false;
@@ -309,7 +300,6 @@ class MapViewModel extends ChangeNotifier {
       }
     } catch (e) {
       errorMessage = 'Erro ao buscar endereço: $e';
-      print('Error selecting end point: $e');
     }
 
     isLoadingMap = false;
@@ -319,7 +309,8 @@ class MapViewModel extends ChangeNotifier {
 
   /// Verificar se ambos os pontos estão definidos
   void _checkCompleteRoute() {
-    hasCompleteRoute = startLatitude != null &&
+    hasCompleteRoute =
+        startLatitude != null &&
         startLongitude != null &&
         endLatitude != null &&
         endLongitude != null;
@@ -401,7 +392,6 @@ class MapViewModel extends ChangeNotifier {
       }
     } catch (e) {
       errorMessage = 'Erro ao processar clique: $e';
-      print('Error handling map click: $e');
     }
 
     isLoadingMap = false;
@@ -410,9 +400,7 @@ class MapViewModel extends ChangeNotifier {
 
   /// Obtener stream de ubicación en tiempo real para mapa
   Stream<void> getMapLocationStream() {
-    return _gpsService
-        .getLocationStream(distanceFilter: 5)
-        .map((location) {
+    return _gpsService.getLocationStream(distanceFilter: 5).map((location) {
       currentLatitude = location.latitude;
       currentLongitude = location.longitude;
       currentHeading = location.heading;
@@ -449,10 +437,13 @@ class MapViewModel extends ChangeNotifier {
     await _navigationSubscription?.cancel();
     _navigationSubscription = _gpsService
         .getLocationStream(distanceFilter: 5)
-        .listen(_handleNavigationLocation, onError: (error) {
-      errorMessage = 'Erro no GPS: $error';
-      notifyListeners();
-    });
+        .listen(
+          _handleNavigationLocation,
+          onError: (error) {
+            errorMessage = 'Erro no GPS: $error';
+            notifyListeners();
+          },
+        );
   }
 
   void _handleNavigationLocation(LocationData location) {
@@ -550,17 +541,6 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      print('═' * 60);
-      print('🗺️ CÁLCULO DE ROTA INICIADO');
-      print('═' * 60);
-      print(
-        '📍 Origem GPS: ($startLatitude, $startLongitude)',
-      );
-      print(
-        '📍 Destino GPS: ($endLatitude, $endLongitude)',
-      );
-      print('📊 Total de nós no grafo: ${_routingService.grafo.length}');
-
       // Encontrar os nós mais próximos do ponto de origem e destino
       String noProximoOrigem = _encontrarNoMaisProximo(
         startLatitude!,
@@ -571,14 +551,6 @@ class MapViewModel extends ChangeNotifier {
         endLongitude!,
       );
 
-      print(
-        '🎯 Nó de origem encontrado: $noProximoOrigem',
-      );
-      print(
-        '🎯 Nó de destino encontrado: $noProximoDestino',
-      );
-
-      // Executar algoritmo A*
       rotaCalculada = _routingService.executarAEstrela(
         noProximoOrigem,
         noProximoDestino,
@@ -588,29 +560,14 @@ class MapViewModel extends ChangeNotifier {
         // Converter para dados de UI
         dadosRotaUI = DadosRota.doResultado(rotaCalculada!);
         errorMessage = null;
-        print(
-          '✅ Rota calculada: ${rotaCalculada!.tempoMinutos.toStringAsFixed(1)} minutos',
-        );
-        print(
-          '📏 Distância: ${rotaCalculada!.distanciaKm.toStringAsFixed(2)} km',
-        );
-        print(
-          '🚦 Semáforos: ${rotaCalculada!.semaforosNoCaminho}',
-        );
-        print(
-          '🛣️ Nós na rota: ${rotaCalculada!.caminhoFinal.length}',
-        );
-        print('Caminho: ${rotaCalculada!.caminhoFinal.join(" → ")}');
       } else {
         errorMessage = 'Não foi possível calcular uma rota para este destino';
         dadosRotaUI = null;
-        print('❌ Nenhuma rota disponível');
       }
     } catch (e) {
       errorMessage = 'Erro ao calcular rota: $e';
       rotaCalculada = null;
       dadosRotaUI = null;
-      print('❌ Erro: $e');
     }
 
     isCalculatingRoute = false;
@@ -624,8 +581,7 @@ class MapViewModel extends ChangeNotifier {
     required double radiusKm,
   }) async {
     if (kIsWeb) {
-      downloadStatusMessage =
-          'Download offline nao esta disponivel no Web.';
+      downloadStatusMessage = 'Download offline nao esta disponivel no Web.';
       notifyListeners();
       return;
     }
@@ -641,11 +597,7 @@ class MapViewModel extends ChangeNotifier {
         radiusKm: radiusKm,
       );
 
-      await _tileManager.importarGeometriaQuadro(
-        latitude,
-        longitude,
-        roads,
-      );
+      await _tileManager.importarGeometriaQuadro(latitude, longitude, roads);
 
       _graphCenterLatitude = latitude;
       _graphCenterLongitude = longitude;
@@ -665,20 +617,16 @@ class MapViewModel extends ChangeNotifier {
     final pontos = <LatLng>[];
 
     if (rotaCalculada == null || rotaCalculada!.caminhoFinal.isEmpty) {
-      debugPrint('⚠️ Rota vazia ou null');
       return pontos;
     }
 
     for (final noId in rotaCalculada!.caminhoFinal) {
       final no = _routingService.grafo[noId];
       if (no == null) {
-        debugPrint('⚠️ Nó não encontrado no grafo: $noId');
         continue;
       }
       pontos.add(LatLng(no.latitude, no.longitude));
     }
-
-    debugPrint('✅ Gerados ${pontos.length} pontos para a rota');
     return pontos;
   }
 
@@ -703,10 +651,6 @@ class MapViewModel extends ChangeNotifier {
       tentativas++;
     }
 
-    print(
-      '   → Verificados $tentativas nós. Mais próximo: $noMaisProximo (distância: ${menorDistancia.toStringAsFixed(4)} km)',
-    );
-
     return noMaisProximo ?? "0_0"; // Fallback ao ponto de origem
   }
 
@@ -720,7 +664,8 @@ class MapViewModel extends ChangeNotifier {
     const double raioTerra = 6371000; // metros
     double dLat = (lat2 - lat1) * pi / 180;
     double dLon = (lon2 - lon1) * pi / 180;
-    double a = sin(dLat / 2) * sin(dLat / 2) +
+    double a =
+        sin(dLat / 2) * sin(dLat / 2) +
         cos(lat1 * pi / 180) *
             cos(lat2 * pi / 180) *
             sin(dLon / 2) *
@@ -764,7 +709,7 @@ class MapViewModel extends ChangeNotifier {
     if (hours > 0) {
       return '${hours}h ${mins}min';
     }
-    return '${mins} min';
+    return '$mins min';
   }
 
   @override

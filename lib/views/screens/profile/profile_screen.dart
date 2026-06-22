@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../viewmodels/profile_viewmodel.dart';
+import '../plans/premium_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Function() onLogout;
@@ -35,10 +36,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text(
-              'Cancelar',
-              style: TextStyle(color: Colors.grey),
-            ),
+            child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
           ),
           TextButton(
             onPressed: () async {
@@ -74,10 +72,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(
         title: const Text(
           'Perfil',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
         ),
         elevation: 0,
         centerTitle: false,
@@ -105,9 +100,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  Text(
+                  const Text(
                     ProfileScreen._defaultUserName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w700,
                       color: Colors.black87,
@@ -116,15 +111,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 6),
                   Text(
                     ProfileScreen._defaultUserEmail,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[700],
-                    ),
+                    style: TextStyle(fontSize: 13, color: Colors.grey[700]),
                   ),
                 ],
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
               child: Row(
@@ -136,9 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
-
             Divider(color: Colors.grey[300], thickness: 1),
-
             _buildProfileSection(
               title: 'Assinatura Ativa',
               children: [
@@ -178,7 +167,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ],
                       ),
                       ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PremiumScreen(),
+                            ),
+                          );
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1B7E3D),
                           padding: const EdgeInsets.symmetric(
@@ -201,12 +197,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
             ),
-
-            _buildProfileSection(
-              title: 'Histórico de Viagens',
-              children: [],
-            ),
-
+            _buildProfileSection(title: 'Histórico de Viagens', children: []),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -306,9 +297,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ),
-        Column(
-          children: children,
-        ),
+        Column(children: children),
         const Divider(thickness: 1, height: 0),
       ],
     );
