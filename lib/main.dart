@@ -2,10 +2,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:proyetomobile2/models/database/database_bootstrap.dart';
 import 'package:proyetomobile2/models/database/web_user_storage.dart';
 import 'package:proyetomobile2/services/notification_service.dart';
 import 'package:proyetomobile2/services/session_service.dart';
+import 'package:proyetomobile2/viewmodels/settings_viewmodel.dart';
+import 'package:proyetomobile2/viewmodels/profile_viewmodel.dart';
 import 'package:proyetomobile2/viewmodels/login_viewmodel.dart';
 import 'package:proyetomobile2/viewmodels/map_viewmodel.dart';
 import 'package:proyetomobile2/views/screens/login/login_screen.dart';
@@ -15,8 +19,6 @@ import 'package:proyetomobile2/views/screens/profile/profile_screen.dart';
 import 'package:proyetomobile2/views/screens/settings/settings_screen.dart';
 import 'package:proyetomobile2/views/wearable/wearable_screen.dart';
 import 'package:proyetomobile2/views/widgets/bottom_nav_bar.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 Future<void> main() async {
   // Aseguramos la inicialización y retenemos la Splash Screen nativa
@@ -63,19 +65,24 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => MapViewModel(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => MapViewModel()),
+        ChangeNotifierProvider(create: (_) => SettingsViewModel()),
+        ChangeNotifierProvider(create: (_) => ProfileViewModel()),
+      ],
       child: MaterialApp(
         title: 'SinalVerde',
-        debugShowCheckedModeBanner:
-            false, // ¡Este se queda para no ver la tira roja!
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
           primaryColor: const Color(0xFF1B7E3D),
           fontFamily: 'Roboto',
         ),
         home: const MainNavigation(),
-        routes: {'/wearable': (context) => const WearableScreen()},
+        routes: {
+          '/wearable': (context) => const WearableScreen(),
+        },
       ),
     );
   }
