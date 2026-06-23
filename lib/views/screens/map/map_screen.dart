@@ -7,6 +7,7 @@ import 'dart:math' as math;
 
 import '../../../services/maps_service.dart';
 import '../../../viewmodels/map_viewmodel.dart';
+import 'package:proyetomobile2/views/screens/plans/premium_screen.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -16,7 +17,7 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  final MapController? _mapController = MapController();
+  final MapController _mapController = MapController();
   final MapsService _mapsService = MapsService.instance;
   late TextEditingController _startController;
   late TextEditingController _endController;
@@ -31,11 +32,9 @@ class _MapScreenState extends State<MapScreen> {
     super.initState();
     _startController = TextEditingController();
     _endController = TextEditingController();
-    if (_mapController != null) {
-      _mapsService.setMapController(_mapController!);
-    }
 
-    // Listener para buscar sugestões de origem
+    _mapsService.setMapController(_mapController);
+
     _startController.addListener(() {
       final viewModel = context.read<MapViewModel>();
       viewModel.setActiveSuggestionMode(0);
@@ -46,7 +45,6 @@ class _MapScreenState extends State<MapScreen> {
       }
     });
 
-    // Listener para buscar sugestões de destino
     _endController.addListener(() {
       final viewModel = context.read<MapViewModel>();
       viewModel.setActiveSuggestionMode(1);
@@ -57,7 +55,6 @@ class _MapScreenState extends State<MapScreen> {
       }
     });
 
-    // Carregar mapa apenas uma vez ao iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         final viewModel = context.read<MapViewModel>();
@@ -77,14 +74,11 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   void _animateToPoint(double latitude, double longitude) {
-    if (_mapController != null) {
-      _mapController!.move(LatLng(latitude, longitude), 15.0);
-    }
+    _mapController.move(LatLng(latitude, longitude), 15.0);
   }
 
   void _fitBothPoints(MapViewModel viewModel) {
-    if (_mapController != null &&
-        viewModel.startLatitude != null &&
+    if (viewModel.startLatitude != null &&
         viewModel.startLongitude != null &&
         viewModel.endLatitude != null &&
         viewModel.endLongitude != null) {
@@ -93,21 +87,18 @@ class _MapScreenState extends State<MapScreen> {
         LatLng(viewModel.endLatitude!, viewModel.endLongitude!),
       );
 
-      _mapController!.fitCamera(
+      _mapController.fitCamera(
         CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(100)),
       );
     }
   }
 
   LatLng _getMapCenter(MapViewModel viewModel) {
-    if (_mapController == null) {
-      return LatLng(viewModel.currentLatitude, viewModel.currentLongitude);
-    }
-    return _mapController!.camera.center;
+    return _mapController.camera.center;
   }
 
   void _centerOnUserIfNavigating(MapViewModel viewModel) {
-    if (!viewModel.isNavigating || _mapController == null) {
+    if (!viewModel.isNavigating) {
       return;
     }
 
@@ -125,11 +116,21 @@ class _MapScreenState extends State<MapScreen> {
     _lastNavigationCenter = current;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _mapController!.move(current, viewModel.zoomLevel);
+      _mapController.move(current, viewModel.zoomLevel);
     });
   }
 
   Future<void> _handleDownload(MapViewModel viewModel) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1B7E3D)),
+        ),
+      ),
+    );
+
     final center = _downloadCenter ?? _getMapCenter(viewModel);
 
     await viewModel.downloadQuadroAt(
@@ -139,8 +140,23 @@ class _MapScreenState extends State<MapScreen> {
     );
 
     if (!mounted) return;
+
+    Navigator.pop(context);
+
     final message = viewModel.downloadStatusMessage;
     if (message == null) return;
+
+    if (message == 'LIMITE_GRATIS_ATINGIDO') {
+      Navigator.pop(context);
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const PremiumScreen()),
+      );
+      return;
+    }
+
+    Navigator.pop(context);
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -234,17 +250,10 @@ class _MapScreenState extends State<MapScreen> {
                       });
                     },
                   ),
-                  if (viewModel.isDownloadingQuadro)
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 12),
-                      child: LinearProgressIndicator(),
-                    ),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: viewModel.isDownloadingQuadro
-                          ? null
-                          : () => _handleDownload(viewModel),
+                      onPressed: () => _handleDownload(viewModel),
                       icon: const Icon(Icons.download),
                       label: const Text('Baixar quadro'),
                       style: ElevatedButton.styleFrom(
@@ -275,7 +284,6 @@ class _MapScreenState extends State<MapScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header com campos de origem e destino
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Consumer<MapViewModel>(
@@ -283,7 +291,6 @@ class _MapScreenState extends State<MapScreen> {
                   _centerOnUserIfNavigating(viewModel);
                   return Column(
                     children: [
-                      // Campo de ORIGEM
                       TextField(
                         controller: _startController,
                         style: const TextStyle(fontSize: 14),
@@ -366,7 +373,6 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Campo de DESTINO
                       TextField(
                         controller: _endController,
                         style: const TextStyle(fontSize: 14),
@@ -448,7 +454,6 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                       ),
 
-                      // Lista de sugestões
                       if (viewModel.isLoadingSuggestions)
                         Container(
                           constraints: const BoxConstraints(maxHeight: 100),
@@ -509,11 +514,9 @@ class _MapScreenState extends State<MapScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 onTap: () {
-                                  // Selecionar o endereço conforme o campo ativo
                                   if (viewModel.activeSuggestionMode == 0) {
                                     viewModel.selectStartPoint(suggestion);
                                     _startController.text = suggestion;
-                                    // Animar para o ponto de origem após selecionar
                                     WidgetsBinding.instance
                                         .addPostFrameCallback((_) {
                                           if (viewModel.startLatitude != null &&
@@ -528,7 +531,6 @@ class _MapScreenState extends State<MapScreen> {
                                   } else {
                                     viewModel.selectEndPoint(suggestion);
                                     _endController.text = suggestion;
-                                    // Animar para o ponto de destino após selecionar
                                     WidgetsBinding.instance
                                         .addPostFrameCallback((_) {
                                           if (viewModel.endLatitude != null &&
@@ -601,7 +603,6 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                         ),
 
-                      // Mensagem de erro se houver
                       if (viewModel.errorMessage != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 8.0),
@@ -636,7 +637,6 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                         ),
 
-                      // Botão para calcular rota
                       if (viewModel.hasCompleteRoute)
                         Padding(
                           padding: const EdgeInsets.only(top: 12.0),
@@ -653,9 +653,7 @@ class _MapScreenState extends State<MapScreen> {
                                 ),
                               ),
                               onPressed: () {
-                                // Centralizar ambos os pontos no mapa
                                 _fitBothPoints(viewModel);
-                                // Aqui será chamado o algoritmo A*
                                 _showCalculatingRoute(context);
                               },
                               child: const Text(
@@ -799,7 +797,6 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
 
-            // Mapa com marcadores
             Expanded(
               child: Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -841,14 +838,12 @@ class _MapScreenState extends State<MapScreen> {
                                   return;
                                 }
 
-                                // Processar clique no mapa
                                 if (viewModel.mapClickMode != null) {
                                   final selectionMode = viewModel.mapClickMode;
                                   await viewModel.handleMapClick(
                                     point.latitude,
                                     point.longitude,
                                   );
-                                  // Atualizar controllers após reverse geocoding
                                   if (selectionMode == 0 &&
                                       viewModel.startAddress != null) {
                                     _startController.text =
@@ -918,7 +913,6 @@ class _MapScreenState extends State<MapScreen> {
                                     ),
                                   ],
                                 ),
-                              // Traçado da rota calculada
                               if (viewModel.rotaCalculada != null &&
                                   viewModel
                                       .rotaCalculada!
@@ -935,7 +929,6 @@ class _MapScreenState extends State<MapScreen> {
                                     ),
                                   ],
                                 ),
-                              // Marcador de origem
                               if (viewModel.startLatitude != null &&
                                   viewModel.startLongitude != null)
                                 MarkerLayer(
@@ -987,8 +980,6 @@ class _MapScreenState extends State<MapScreen> {
                                     ),
                                   ],
                                 ),
-
-                              // Marcador de destino
                               if (viewModel.endLatitude != null &&
                                   viewModel.endLongitude != null)
                                 MarkerLayer(
@@ -1044,7 +1035,6 @@ class _MapScreenState extends State<MapScreen> {
                             ],
                           ),
 
-                          // Botões de ação
                           Positioned(
                             bottom: 16,
                             right: 16,
@@ -1132,7 +1122,6 @@ class _MapScreenState extends State<MapScreen> {
                             ),
                           ),
 
-                          // Indicador quando modo de clique está ativo
                           if (viewModel.mapClickMode != null)
                             Positioned(
                               top: 16,
@@ -1159,7 +1148,7 @@ class _MapScreenState extends State<MapScreen> {
                                 ),
                                 child: Row(
                                   children: [
-                                    Icon(
+                                    const Icon(
                                       Icons.location_on,
                                       color: Colors.white,
                                       size: 20,
@@ -1238,7 +1227,6 @@ class _MapScreenState extends State<MapScreen> {
   void _showCalculatingRoute(BuildContext context) {
     final viewModel = context.read<MapViewModel>();
 
-    // Mostrar loading
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Column(
@@ -1273,10 +1261,8 @@ class _MapScreenState extends State<MapScreen> {
       ),
     );
 
-    // Calcular rota
     viewModel.calcularMelhorRota().then((_) {
       if (viewModel.dadosRotaUI != null) {
-        // Mostrar resultado
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Column(
@@ -1311,10 +1297,8 @@ class _MapScreenState extends State<MapScreen> {
           ),
         );
 
-        // Redesenhar mapa para mostrar a rota
         setState(() {});
       } else if (viewModel.errorMessage != null) {
-        // Mostrar erro
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(

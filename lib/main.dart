@@ -8,6 +8,7 @@ import 'package:proyetomobile2/services/notification_service.dart';
 import 'package:proyetomobile2/services/session_service.dart';
 import 'package:proyetomobile2/viewmodels/login_viewmodel.dart';
 import 'package:proyetomobile2/viewmodels/map_viewmodel.dart';
+import 'package:proyetomobile2/viewmodels/settings_viewmodel.dart';
 import 'package:proyetomobile2/views/screens/login/login_screen.dart';
 import 'package:proyetomobile2/views/screens/map/map_screen.dart';
 import 'package:proyetomobile2/views/screens/plans/plans_screen.dart';
@@ -19,41 +20,29 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 Future<void> main() async {
-  // Aseguramos la inicialización y retenemos la Splash Screen nativa
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   if (kIsWeb) {
     try {
       await WebUserStorage().initialize();
-    } catch (e) {
-      // Errores silenciados en producción
-    }
+    } catch (e) {}
   } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
 
-  // Inicializar banco
   try {
     await DatabaseBootstrap.initialize();
-  } catch (e) {
-    // Errores silenciados em produção
-  }
+  } catch (e) {}
 
-  // Inicializar notificações
   try {
     await NotificationService.instance.initialize();
-  } catch (e) {
-    // Errores silenciados em produção
-  }
+  } catch (e) {}
 
-  // Inicializar sessão
   try {
     await SessionService().initialize();
-  } catch (e) {
-    // Errores silenciados em produção
-  }
+  } catch (e) {}
 
   runApp(const MainApp());
 }
@@ -67,8 +56,7 @@ class MainApp extends StatelessWidget {
       create: (_) => MapViewModel(),
       child: MaterialApp(
         title: 'SinalVerde',
-        debugShowCheckedModeBanner:
-            false, // ¡Este se queda para no ver la tira roja!
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
           primaryColor: const Color(0xFF1B7E3D),
@@ -121,7 +109,6 @@ class _MainNavigationState extends State<MainNavigation> {
         });
       }
     } finally {
-      // Cuando termina de chequear la sesión, sacamos la Splash Screen nativa
       FlutterNativeSplash.remove();
     }
   }
@@ -137,7 +124,6 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
-    // Ya no mostramos el "Carregando..." manual porque la Splash Screen lo cubre
     if (isCheckingSession) {
       return const Scaffold(backgroundColor: Colors.white);
     }
@@ -180,7 +166,10 @@ class _MainNavigationState extends State<MainNavigation> {
       case 1:
         return const MapScreen();
       case 2:
-        return const SettingsScreen();
+        return ChangeNotifierProvider(
+          create: (_) => SettingsViewModel(),
+          child: const SettingsScreen(),
+        );
       case 3:
         return ProfileScreen(onLogout: _handleLogout);
       default:

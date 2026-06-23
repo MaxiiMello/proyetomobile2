@@ -18,7 +18,7 @@ class MapViewModel extends ChangeNotifier {
   final TileManagerService _tileManager = TileManagerService();
   final RoadsDownloadService _roadsDownloadService = RoadsDownloadService();
 
-  double currentLatitude = -30.8936; // Santana do Livramento, RS
+  double currentLatitude = -30.8936;
   double currentLongitude = -55.5205;
   String? selectedDestination;
   double zoomLevel = 15.0;
@@ -29,11 +29,11 @@ class MapViewModel extends ChangeNotifier {
   User? currentUser;
   double? currentHeading;
 
-  // Propriedades para sugestões de endereços
+  bool isPremiumSimulation = false;
+
   List<String> addressSuggestions = [];
   bool isLoadingSuggestions = false;
 
-  // Propriedades para origem e destino
   String? startAddress;
   double? startLatitude;
   double? startLongitude;
@@ -42,15 +42,12 @@ class MapViewModel extends ChangeNotifier {
   double? endLatitude;
   double? endLongitude;
 
-  // Controla qual campo está sendo editado (0 = origem, 1 = destino)
-  int? activeSuggestionMode; // null = nenhum, 0 = origem, 1 = destino
+  int? activeSuggestionMode;
 
-  bool hasCompleteRoute = false; // true quando ambos os pontos estão definidos
+  bool hasCompleteRoute = false;
 
-  // Modo de clique no mapa: 0 = origem, 1 = destino, null = desativado
   int? mapClickMode;
 
-  // Propriedades de roteamento
   ResultadoRota? rotaCalculada;
   DadosRota? dadosRotaUI;
   bool isCalculatingRoute = false;
@@ -68,31 +65,28 @@ class MapViewModel extends ChangeNotifier {
 
   MapViewModel({User? user}) {
     currentUser = user;
-    // Inicializar grafo da cidade (async)
     _inicializarGrafo();
-    // Se em web, já começa com coordenadas padrão
     if (kIsWeb) {
       isLoadingMap = false;
     } else {
-      // Em mobile, tenta carregar localização real
       loadMap();
     }
   }
 
-  /// Inicializar o grafo da cidade carregando dados reais do banco de dados
-  /// ou gerando dados de exemplo se não existirem
+  void ativarPremium() {
+    isPremiumSimulation = true;
+    notifyListeners();
+  }
+
   Future<void> _inicializarGrafo() async {
     _routingService.limpar();
 
-    // Coordenadas de Santana do Livramento (Brasil)
     final latBase = _graphCenterLatitude ?? -30.8936;
     final lonBase = _graphCenterLongitude ?? -55.5205;
 
     try {
-      // Carregar grafo do TileManager (que carrega do BD)
       final grafo = await _tileManager.construirGrafoDoQuadro(latBase, lonBase);
 
-      // Adicionar nós ao RoutingService (as conexões já estão no grafo)
       for (var no in grafo.values) {
         _routingService.adicionarNo(no);
       }
@@ -106,32 +100,27 @@ class MapViewModel extends ChangeNotifier {
     }
   }
 
-  /// Caregar mapa
   Future<void> loadMap() async {
     isLoadingMap = true;
     errorMessage = null;
     notifyListeners();
 
     try {
-      // Primeiro tenta última localização conhecida (mais rápido) com timeout
       LocationData? location;
       try {
         location = await _gpsService.getLastKnownLocation().timeout(
           const Duration(seconds: 5),
         );
       } catch (e) {
-        // Continua mesmo que falhe
         location = null;
       }
 
-      // Se não encontrou última localização, obtém atual com timeout
       if (location == null) {
         try {
           location = await _gpsService.getCurrentLocation().timeout(
             const Duration(seconds: 8),
           );
         } catch (e) {
-          // Se GPS falhar, usa localização padrão (Santana do Livramento, RS)
           currentLatitude = -30.8936;
           currentLongitude = -55.5205;
           isLoadingMap = false;
@@ -147,7 +136,6 @@ class MapViewModel extends ChangeNotifier {
       isLoadingMap = false;
       notifyListeners();
     } catch (e) {
-      // Fallback para localização padrão se tudo falhar
       currentLatitude = -30.8936;
       currentLongitude = -55.5205;
       isLoadingMap = false;
@@ -155,7 +143,6 @@ class MapViewModel extends ChangeNotifier {
     }
   }
 
-  /// Solicitar y obtener ubicación GPS
   Future<void> requestGPSLocation() async {
     try {
       final location = await _gpsService.getCurrentLocation();
@@ -169,7 +156,6 @@ class MapViewModel extends ChangeNotifier {
     }
   }
 
-  /// Zoom in
   void zoomIn() {
     if (zoomLevel < 20) {
       zoomLevel += 1;
@@ -177,7 +163,6 @@ class MapViewModel extends ChangeNotifier {
     }
   }
 
-  /// Zoom out
   void zoomOut() {
     if (zoomLevel > 5) {
       zoomLevel -= 1;
@@ -185,7 +170,6 @@ class MapViewModel extends ChangeNotifier {
     }
   }
 
-  /// Buscar sugestões de endereços enquanto o usuário digita
   Future<void> getAddressSuggestions(String input) async {
     if (input.isEmpty) {
       addressSuggestions = [];
@@ -214,11 +198,10 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Selecionar um endereço e mover o mapa para lá
   Future<void> selectAddress(String address) async {
     isLoadingMap = true;
     selectedDestination = address;
-    addressSuggestions = []; // Limpar sugestões
+    addressSuggestions = [];
     notifyListeners();
 
     try {
@@ -227,7 +210,7 @@ class MapViewModel extends ChangeNotifier {
       if (suggestion != null) {
         currentLatitude = suggestion.latitude;
         currentLongitude = suggestion.longitude;
-        zoomLevel = 15.0; // Reset zoom para endereço selecionado
+        zoomLevel = 15.0;
         errorMessage = null;
       } else {
         errorMessage = 'Não foi possível encontrar este local';
@@ -240,20 +223,17 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Limpar sugestões
   void clearSuggestions() {
     addressSuggestions = [];
     notifyListeners();
   }
 
-  /// Definir mode de sugestão (qual campo está ativo: 0=origem, 1=destino)
   void setActiveSuggestionMode(int? mode) {
     activeSuggestionMode = mode;
     clearSuggestions();
     notifyListeners();
   }
 
-  /// Selecionar local de origem
   Future<void> selectStartPoint(String address) async {
     isLoadingMap = true;
     addressSuggestions = [];
@@ -280,7 +260,6 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Selecionar local de destino
   Future<void> selectEndPoint(String address) async {
     isLoadingMap = true;
     addressSuggestions = [];
@@ -307,7 +286,6 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Verificar se ambos os pontos estão definidos
   void _checkCompleteRoute() {
     hasCompleteRoute =
         startLatitude != null &&
@@ -316,7 +294,6 @@ class MapViewModel extends ChangeNotifier {
         endLongitude != null;
   }
 
-  /// Limpar pontos de origem e destino
   void clearRoutePoints() {
     startAddress = null;
     startLatitude = null;
@@ -329,7 +306,6 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Limpar apenas o ponto de origem
   void clearStartPoint() {
     startAddress = null;
     startLatitude = null;
@@ -338,7 +314,6 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Limpar apenas o ponto de destino
   void clearEndPoint() {
     endAddress = null;
     endLatitude = null;
@@ -347,19 +322,16 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Ativar modo de clique no mapa (0 = origem, 1 = destino)
   void activateMapClickMode(int mode) {
     mapClickMode = mode;
     notifyListeners();
   }
 
-  /// Desativar modo de clique no mapa
   void deactivateMapClickMode() {
     mapClickMode = null;
     notifyListeners();
   }
 
-  /// Processar clique no mapa (reverse geocoding)
   Future<void> handleMapClick(double latitude, double longitude) async {
     if (mapClickMode == null) {
       return;
@@ -386,7 +358,7 @@ class MapViewModel extends ChangeNotifier {
         }
         _checkCompleteRoute();
         errorMessage = null;
-        mapClickMode = null; // Desativar modo após selecionar
+        mapClickMode = null;
       } else {
         errorMessage = 'Não foi possível identificar o endereço neste local';
       }
@@ -398,7 +370,6 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Obtener stream de ubicación en tiempo real para mapa
   Stream<void> getMapLocationStream() {
     return _gpsService.getLocationStream(distanceFilter: 5).map((location) {
       currentLatitude = location.latitude;
@@ -408,7 +379,6 @@ class MapViewModel extends ChangeNotifier {
     });
   }
 
-  /// Iniciar navegacao em tempo real
   Future<void> startNavigation() async {
     if (endLatitude == null || endLongitude == null) {
       errorMessage = 'Defina um destino antes de iniciar a rota.';
@@ -426,7 +396,6 @@ class MapViewModel extends ChangeNotifier {
     errorMessage = null;
     notifyListeners();
 
-    // Usar posicao atual como origem
     startLatitude = currentLatitude;
     startLongitude = currentLongitude;
     startAddress = 'Posicao atual';
@@ -521,8 +490,6 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Calcular a melhor rota usando A*
-  /// Considera: tipo de via (asfalto/terra) e semáforos
   Future<void> calcularMelhorRota() async {
     if (!hasCompleteRoute || startLatitude == null || endLatitude == null) {
       errorMessage = 'Origem e destino precisam estar definidos';
@@ -541,7 +508,6 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Encontrar os nós mais próximos do ponto de origem e destino
       String noProximoOrigem = _encontrarNoMaisProximo(
         startLatitude!,
         startLongitude!,
@@ -557,7 +523,6 @@ class MapViewModel extends ChangeNotifier {
       );
 
       if (rotaCalculada != null && rotaCalculada!.temRota) {
-        // Converter para dados de UI
         dadosRotaUI = DadosRota.doResultado(rotaCalculada!);
         errorMessage = null;
       } else {
@@ -574,7 +539,6 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Baixar quadro offline e persistir geometria real das ruas
   Future<void> downloadQuadroAt({
     required double latitude,
     required double longitude,
@@ -591,6 +555,15 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final bool isPremium = isPremiumSimulation;
+
+      final bool temMapaInstalado = _routingService.grafo.isNotEmpty;
+
+      if (temMapaInstalado && !isPremium) {
+        downloadStatusMessage = 'LIMITE_GRATIS_ATINGIDO';
+        return;
+      }
+
       final roads = await _roadsDownloadService.downloadRoads(
         latitude: latitude,
         longitude: longitude,
@@ -612,7 +585,6 @@ class MapViewModel extends ChangeNotifier {
     }
   }
 
-  /// Converter caminho final em pontos geograficos usando o grafo carregado
   List<LatLng> buildRoutePoints() {
     final pontos = <LatLng>[];
 
@@ -630,11 +602,9 @@ class MapViewModel extends ChangeNotifier {
     return pontos;
   }
 
-  /// Encontrar o nó mais próximo de uma coordenada
   String _encontrarNoMaisProximo(double latitude, double longitude) {
     double menorDistancia = double.infinity;
     String? noMaisProximo;
-    int tentativas = 0;
 
     for (var no in _routingService.grafo.values) {
       double distancia = _calcularDistancia(
@@ -648,20 +618,18 @@ class MapViewModel extends ChangeNotifier {
         menorDistancia = distancia;
         noMaisProximo = no.id;
       }
-      tentativas++;
     }
 
-    return noMaisProximo ?? "0_0"; // Fallback ao ponto de origem
+    return noMaisProximo ?? "0_0";
   }
 
-  /// Calcular distância entre dois pontos (Haversine)
   double _calcularDistancia(
     double lat1,
     double lon1,
     double lat2,
     double lon2,
   ) {
-    const double raioTerra = 6371000; // metros
+    const double raioTerra = 6371000;
     double dLat = (lat2 - lat1) * pi / 180;
     double dLon = (lon2 - lon1) * pi / 180;
     double a =
@@ -671,11 +639,10 @@ class MapViewModel extends ChangeNotifier {
             sin(dLon / 2) *
             sin(dLon / 2);
     double c = 2 * asin(sqrt(a));
-    double distancia = raioTerra * c; // em metros
-    return distancia / 1000; // retorna em km
+    double distancia = raioTerra * c;
+    return distancia / 1000;
   }
 
-  /// Limpar rota calculada
   void limparRota() {
     rotaCalculada = null;
     dadosRotaUI = null;
