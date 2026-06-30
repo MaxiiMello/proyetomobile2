@@ -53,7 +53,7 @@ class AddressService {
       final String url =
           '$_geoapifyUrl/search?text=$input&apiKey=$_apiKey&countrycodes=br&limit=10';
 
-      debugPrint('📍 Buscando endereços: $input');
+      debugPrint(' Buscando endereços: $input');
       
       final response = await http.get(
         Uri.parse(url),
@@ -69,7 +69,7 @@ class AddressService {
         },
       );
 
-      debugPrint('✅ Status: ${response.statusCode}');
+      debugPrint(' Status: ${response.statusCode}');
 
       // Tratamento de rate limiting
       if (response.statusCode == 429) {
@@ -105,7 +105,7 @@ class AddressService {
             .where((desc) => desc.isNotEmpty)
             .toList();
 
-        debugPrint('✅ Encontrado ${suggestions.length} sugestões');
+        debugPrint(' Encontrado ${suggestions.length} sugestões');
         return suggestions;
       } else {
         debugPrint('❌ Erro na resposta: ${response.statusCode}');
@@ -131,7 +131,7 @@ class AddressService {
       final String url =
           '$_geoapifyUrl/search?text=$address&apiKey=$_apiKey&countrycodes=br&limit=1';
 
-      debugPrint('🔍 Geocodificando: $address');
+      debugPrint(' Geocodificando: $address');
 
       final response = await http.get(
         Uri.parse(url),
@@ -178,7 +178,7 @@ class AddressService {
                   .where((p) => p.isNotEmpty)
                   .join(', ');
 
-              debugPrint('✅ Geocodificado: $displayName ($lat, $lon)');
+              debugPrint(' Geocodificado: $displayName ($lat, $lon)');
 
               return AddressSuggestion(
                 displayName: displayName.isNotEmpty ? displayName : address,
@@ -234,7 +234,7 @@ class AddressService {
       final String url =
           '$_geoapifyUrl/reverse?lat=$latitude&lon=$longitude&apiKey=$_apiKey';
 
-      debugPrint('🔄 Reverse Geocoding: ($latitude, $longitude)');
+      debugPrint(' Reverse Geocoding: ($latitude, $longitude)');
 
       final response = await http.get(
         Uri.parse(url),
@@ -283,7 +283,7 @@ class AddressService {
               // Armazenar em cache
               _geocodeCache[cacheKey] = suggestion;
               
-              debugPrint('✅ Reverse Geocodificado: $displayName');
+              debugPrint(' Reverse Geocodificado: $displayName');
               return suggestion;
             }
           }

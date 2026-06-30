@@ -15,11 +15,11 @@ import 'package:proyetomobile2/viewmodels/map_viewmodel.dart';
 import 'package:proyetomobile2/viewmodels/settings_viewmodel.dart';
 import 'package:proyetomobile2/views/screens/login/login_screen.dart';
 import 'package:proyetomobile2/views/screens/map/map_screen.dart';
-import 'package:proyetomobile2/views/screens/plans/plans_screen.dart';
 import 'package:proyetomobile2/views/screens/profile/profile_screen.dart';
 import 'package:proyetomobile2/views/screens/settings/settings_screen.dart';
 import 'package:proyetomobile2/views/wearable/wearable_screen.dart';
 import 'package:proyetomobile2/views/widgets/bottom_nav_bar.dart';
+import 'package:proyetomobile2/views/screens/plans/premium_screen.dart';
 
 Future<void> main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -170,7 +170,7 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget _buildBody() {
     switch (currentIndex) {
       case 0:
-        return const PlansScreen();
+        return const PremiumScreen();
       case 1:
         return const MapScreen();
       case 2:

@@ -40,12 +40,12 @@ class LoginViewModel extends ChangeNotifier {
       );
 
       currentUser = user;
-      print('✅ [LoginViewModel] Login exitoso, usuario: ${user.email}');
+      print(' [LoginViewModel] Login exitoso, usuario: ${user.email}');
       
       // Salvar sessão para manter logado
       try {
         await _sessionService.saveSession(user);
-        print('✅ [LoginViewModel] Sesión guardada');
+        print(' [LoginViewModel] Sesión guardada');
       } catch (e) {
         print('⚠️ [LoginViewModel] Error al guardar sesión: $e');
         // Continua mesmo se a sessão não salvar (usuário ainda pode fazer login)
@@ -101,12 +101,12 @@ class LoginViewModel extends ChangeNotifier {
       );
 
       currentUser = user;
-      print('✅ [LoginViewModel] Registro exitoso para: ${user.email}');
+      print(' [LoginViewModel] Registro exitoso para: ${user.email}');
       
       // Salvar sessão após registro bem-sucedido
       try {
         await _sessionService.saveSession(user);
-        print('✅ [LoginViewModel] Sesión guardada después de registro');
+        print(' [LoginViewModel] Sesión guardada después de registro');
       } catch (e) {
         print('⚠️ [LoginViewModel] Error al guardar sesión después de registro: $e');
         // Continua mesmo se a sessão não salvar

@@ -8,6 +8,7 @@ import 'dart:math' as math;
 import '../../../services/maps_service.dart';
 import '../../../viewmodels/map_viewmodel.dart';
 import 'package:proyetomobile2/views/screens/plans/premium_screen.dart';
+import 'package:proyetomobile2/viewmodels/profile_viewmodel.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -34,26 +35,6 @@ class _MapScreenState extends State<MapScreen> {
     _endController = TextEditingController();
 
     _mapsService.setMapController(_mapController);
-
-    _startController.addListener(() {
-      final viewModel = context.read<MapViewModel>();
-      viewModel.setActiveSuggestionMode(0);
-      if (_startController.text.isNotEmpty) {
-        viewModel.getAddressSuggestions(_startController.text);
-      } else {
-        viewModel.clearSuggestions();
-      }
-    });
-
-    _endController.addListener(() {
-      final viewModel = context.read<MapViewModel>();
-      viewModel.setActiveSuggestionMode(1);
-      if (_endController.text.isNotEmpty) {
-        viewModel.getAddressSuggestions(_endController.text);
-      } else {
-        viewModel.clearSuggestions();
-      }
-    });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -133,10 +114,13 @@ class _MapScreenState extends State<MapScreen> {
 
     final center = _downloadCenter ?? _getMapCenter(viewModel);
 
+    final isPremium = context.read<ProfileViewModel>().subscriptionPlan == 'premium';
+
     await viewModel.downloadQuadroAt(
       latitude: center.latitude,
       longitude: center.longitude,
       radiusKm: _downloadRadiusKm,
+      isPremiumUser: isPremium, 
     );
 
     if (!mounted) return;
@@ -296,6 +280,13 @@ class _MapScreenState extends State<MapScreen> {
                         style: const TextStyle(fontSize: 14),
                         onChanged: (value) {
                           setState(() {});
+                          final mapViewModel = context.read<MapViewModel>();
+                          mapViewModel.setActiveSuggestionMode(0);
+                          if (value.isNotEmpty) {
+                            mapViewModel.getAddressSuggestions(value);
+                          } else {
+                            mapViewModel.clearSuggestions();
+                          }
                         },
                         decoration: InputDecoration(
                           hintText: 'Local de início...',
@@ -318,6 +309,7 @@ class _MapScreenState extends State<MapScreen> {
                                   onPressed: () {
                                     _startController.clear();
                                     viewModel.clearStartPoint();
+                                    viewModel.clearSuggestions();
                                   },
                                 )
                               : IconButton(
@@ -378,6 +370,13 @@ class _MapScreenState extends State<MapScreen> {
                         style: const TextStyle(fontSize: 14),
                         onChanged: (value) {
                           setState(() {});
+                          final mapViewModel = context.read<MapViewModel>();
+                          mapViewModel.setActiveSuggestionMode(1);
+                          if (value.isNotEmpty) {
+                            mapViewModel.getAddressSuggestions(value);
+                          } else {
+                            mapViewModel.clearSuggestions();
+                          }
                         },
                         decoration: InputDecoration(
                           hintText: 'Local de destino...',
@@ -400,6 +399,7 @@ class _MapScreenState extends State<MapScreen> {
                                   onPressed: () {
                                     _endController.clear();
                                     viewModel.clearEndPoint();
+                                    viewModel.clearSuggestions();
                                   },
                                 )
                               : IconButton(
@@ -1270,7 +1270,7 @@ class _MapScreenState extends State<MapScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '✅ Rota Calculada!',
+                  ' Rota Calculada!',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 14,

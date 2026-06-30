@@ -543,6 +543,7 @@ class MapViewModel extends ChangeNotifier {
     required double latitude,
     required double longitude,
     required double radiusKm,
+    required bool isPremiumUser, 
   }) async {
     if (kIsWeb) {
       downloadStatusMessage = 'Download offline nao esta disponivel no Web.';
@@ -555,11 +556,9 @@ class MapViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final bool isPremium = isPremiumSimulation;
-
       final bool temMapaInstalado = _routingService.grafo.isNotEmpty;
 
-      if (temMapaInstalado && !isPremium) {
+      if (temMapaInstalado && !isPremiumUser) {
         downloadStatusMessage = 'LIMITE_GRATIS_ATINGIDO';
         return;
       }

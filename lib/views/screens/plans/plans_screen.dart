@@ -1,173 +1,220 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:proyetomobile2/viewmodels/map_viewmodel.dart';
+import 'package:proyetomobile2/viewmodels/profile_viewmodel.dart';
 
-class PlansScreen extends StatelessWidget {
-  const PlansScreen({super.key});
+class PremiumScreen extends StatefulWidget {
+  const PremiumScreen({super.key});
+
+  @override
+  State<PremiumScreen> createState() => _PremiumScreenState();
+}
+
+class _PremiumScreenState extends State<PremiumScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<ProfileViewModel>().refreshProfile();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Escuchamos solo la variable para actualizar la pantalla
-    final isPremium = context.watch<MapViewModel>().isPremiumSimulation;
+    final profileViewModel = context.watch<ProfileViewModel>();
+    final isPremium = profileViewModel.currentUser?.subscriptionPlan == 'premium' ||
+        profileViewModel.subscriptionPlan == 'premium';
+
+    if (isPremium) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Colors.white,
+          iconTheme: const IconThemeData(color: Colors.black87),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1B7E3D).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.verified_rounded,
+                  size: 80,
+                  color: Color(0xFF1B7E3D),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Você é Premium!',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Mapas ilimitados desbloqueados.',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[700],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text(
-          'Planos e Assinaturas',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        centerTitle: true,
+        backgroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.black87),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1B7E3D), Color(0xFF2E8B57)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1B7E3D).withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
                 ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF1B7E3D).withOpacity(0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
+                child: const Icon(
+                  Icons.star_rounded,
+                  size: 64,
+                  color: Color(0xFF1B7E3D),
+                ),
               ),
-              child: Column(
-                children: [
-                  const Icon(Icons.star, color: Colors.amber, size: 48),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Sinal Verde Premium',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Desbloqueie todo o poder da navegação offline na fronteira.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-                  const SizedBox(height: 24),
-                  _buildFeatureItem(Icons.map, 'Mapas offline ilimitados'),
-                  _buildFeatureItem(Icons.wifi_off, 'Navegação sem internet'),
-                  _buildFeatureItem(Icons.block, 'Zero anúncios (Simulado)'),
-                  const SizedBox(height: 24),
-
-                  if (!isPremium) ...[
-                    const Text(
-                      'R\$ 49,90 / ano',
+              const SizedBox(height: 24),
+              const Text(
+                'Sinal Verde Premium',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Desbloqueie todo o potencial do cálculo de rotas offline sem interrupções.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 40),
+              _buildBenefitItem(Icons.map, 'Mapas offline ilimitados'),
+              const SizedBox(height: 16),
+              _buildBenefitItem(Icons.block, 'Experiência 100% sem anúncios'),
+              const SizedBox(height: 16),
+              _buildBenefitItem(Icons.speed, 'Cálculo de rotas mais rápido'),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: Border.all(color: const Color(0xFF1B7E3D), width: 2),
+                  borderRadius: BorderRadius.circular(12),
+                  color: const Color(0xFF1B7E3D).withValues(alpha: 0.05),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Plano Anual',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    Text(
+                      'R\$ 49,90/ano',
+                      style: TextStyle(
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF1B7E3D),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        minimumSize: const Size(double.infinity, 50),
-                      ),
-                      onPressed: () {
-                        // Usamos read() para ejecutar la acción sin escuchar
-                        context.read<MapViewModel>().ativarPremium();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text(
-                              'Simulação de compra realizada com sucesso!',
-                            ),
-                            backgroundColor: Colors.green[700],
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        'Assinar Agora',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ] else ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'Você já é Premium!',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        color: Color(0xFF1B7E3D),
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              isPremium ? 'Plano Atual: Premium' : 'Plano Atual: Grátis',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: isPremium ? const Color(0xFF1B7E3D) : Colors.grey,
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    bool success = await context.read<ProfileViewModel>().upgradeToPremium();
+                    if (success) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('¡Bem-vindo ao Premium! Mapas ilimitados liberados.'),
+                            backgroundColor: Color(0xFF1B7E3D),
+                          ),
+                        );
+                        if (Navigator.canPop(context)) {
+                          Navigator.pop(context);
+                        }
+                      }
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1B7E3D),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Assinar Agora',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              isPremium
-                  ? 'Você tem acesso ilimitado a todos os mapas offline.'
-                  : 'Limite de 1 mapa offline. Sujeito a bloqueios.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildFeatureItem(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.white, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+  Widget _buildBenefitItem(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFF1B7E3D), size: 28),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.black87,
+              fontWeight: FontWeight.w500,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

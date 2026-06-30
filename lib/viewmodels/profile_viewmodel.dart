@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/database/repositories/user_repository.dart';
+import '../services/session_service.dart';
 
 class ProfileViewModel extends ChangeNotifier {
   final UserRepository _userRepository = UserRepository();
@@ -96,17 +97,21 @@ class ProfileViewModel extends ChangeNotifier {
   }
 
   Future<void> refreshProfile() async {
-    if (currentUser == null) {
-      errorMessage = 'Usuario no autenticado';
-      notifyListeners();
-      return;
-    }
-
     isLoadingProfile = true;
+    errorMessage = null;
     notifyListeners();
 
     try {
-      final user = await _userRepository.getUserById(currentUser!.id);
+      final userId = currentUser?.id ?? SessionService().currentUserId;
+
+      if (userId == null) {
+        errorMessage = 'Usuario no autenticado';
+        isLoadingProfile = false;
+        notifyListeners();
+        return;
+      }
+
+      final user = await _userRepository.getUserById(userId);
       if (user != null) {
         currentUser = user;
         _initializeData();
@@ -118,6 +123,46 @@ class ProfileViewModel extends ChangeNotifier {
       errorMessage = e.toString().replaceAll('Exception: ', '');
       isLoadingProfile = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> upgradeToPremium() async {
+    isLoadingProfile = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final userId = currentUser?.id ?? SessionService().currentUserId;
+
+      if (userId == null) {
+        errorMessage = 'Usuario no autenticado';
+        isLoadingProfile = false;
+        notifyListeners();
+        return false;
+      }
+
+      final updatedUser = await _userRepository.updateSubscription(
+        userId: userId,
+        plan: 'premium',
+        daysValid: 365,
+      );
+
+      if (updatedUser != null) {
+        currentUser = updatedUser;
+        _initializeData();
+      }
+
+      subscriptionPlan = currentUser?.subscriptionPlan ?? 'premium';
+      renewalDays = currentUser?.subscriptionEndDate?.toString() ?? renewalDays;
+
+      isLoadingProfile = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      errorMessage = e.toString().replaceAll('Exception: ', '');
+      isLoadingProfile = false;
+      notifyListeners();
+      return false;
     }
   }
 

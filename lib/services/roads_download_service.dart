@@ -21,7 +21,7 @@ class RoadsDownloadService {
       radiusMeters: radiusMeters,
     );
 
-    debugPrint('🌍 Baixando geometria OSM (raio: ${radiusMeters}m)');
+    debugPrint(' Baixando geometria OSM (raio: ${radiusMeters}m)');
 
     final response = await http
         .post(
@@ -101,7 +101,7 @@ class RoadsDownloadService {
       throw Exception('Nenhuma via encontrada para o raio selecionado.');
     }
 
-    debugPrint('✅ Geometrias baixadas: ${roads.length} vias');
+    debugPrint(' Geometrias baixadas: ${roads.length} vias');
     return roads;
   }
 

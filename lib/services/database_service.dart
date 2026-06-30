@@ -38,7 +38,7 @@ class DatabaseService {
          Platform.isMacOS)) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
-      debugPrint('✅ databaseFactory configurado no DatabaseService');
+      debugPrint(' databaseFactory configurado no DatabaseService');
     }
 
     _ffiInitialized = true;

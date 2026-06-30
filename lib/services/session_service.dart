@@ -46,7 +46,7 @@ class SessionService {
       await _prefs.setString(_userEmailKey, user.email);
       await _prefs.setBool(_sessionActiveKey, true);
       _currentUser = user;
-      print('✅ Sessão salva com sucesso');
+      print(' Sessão salva com sucesso');
     } catch (e) {
       print('❌ Erro ao salvar sessão: $e');
       rethrow;
